@@ -1,100 +1,77 @@
-# vinext-starter
+# SpareScout
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+SpareScout is a phone-powered sourcing workspace for vehicle parts. A buyer enters the vehicle and part details once; SpareScout calls several dealers, verifies fitment, captures price and availability, and presents comparable offers with evidence.
 
-## Prerequisites
+The current version is a complete dry-run prototype. It demonstrates the request, approval, supplier outreach, comparison, and reservation-preview flow without placing calls or making commitments.
 
-- Node.js `>=22.13.0`
+## Why this exists
 
-## Quick Start
+Parts inventory is often fragmented across phone-first sellers. Finding the correct item means repeating vehicle details, checking compatibility, comparing prices, and coordinating delivery across several calls. SpareScout turns that work into one supervised workflow.
+
+## Product principles
+
+- Fitment before price: a cheaper incompatible part is not an offer.
+- Evidence over summaries: every structured field should trace back to the call.
+- Human approval at side effects: calls and reservation attempts are separate approval gates.
+- No purchasing authority: the agent may never commit funds or place an order.
+- Honest uncertainty: incomplete compatibility checks remain visibly incomplete.
+
+## Current flow
+
+1. Enter the vehicle, chassis, part, budget, location, and timing.
+2. Review the exact supplier call plan and masked recipients.
+3. Approve a dry run across three example dealers.
+4. Compare normalized offers, confidence, and call evidence.
+5. Select an offer and preview the separate reservation step.
+
+## Local development
+
+Requirements: Node.js 22.13 or newer.
 
 ```bash
-npm install
+npm ci
 npm run dev
+```
+
+Open `http://localhost:3000`.
+
+```bash
 npm run build
+npm test
+npm run lint
 ```
 
-This starter does not use `wrangler.jsonc`.
+## CALL-E integration boundary
 
-## Included Shape
+CALL-E is authenticated in the development environment and exposes `plan_call`, `run_call`, and `get_call_run`. The prototype intentionally does not invoke those tools yet.
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+The production path will replace the timed dry-run activity with a server-side adapter that:
 
-## Workspace Auth Headers
+- creates one call plan for the selected suppliers;
+- requires a fresh user approval before execution;
+- stores only opaque plan and run identifiers;
+- polls or receives run completion updates;
+- validates extracted quote fields before display; and
+- refuses payment, purchase, and reservation instructions during sourcing calls.
 
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
+See [docs/call-e-integration.md](docs/call-e-integration.md) for the implementation contract.
 
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
+## Stack
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+- React 19 and TypeScript
+- vinext and Vite
+- Cloudflare Workers-compatible runtime
+- CALL-E for phone call planning and execution
 
-Treat the full name as optional and fall back to email when it is absent:
+## Status
 
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- [x] Guided sourcing request
+- [x] Call-plan approval gate
+- [x] Realistic batch-call dry run
+- [x] Structured quote comparison
+- [x] Evidence and confidence treatment
+- [x] Reservation approval preview
+- [ ] Server-side CALL-E adapter
+- [ ] Webhook-backed run updates
+- [ ] Supplier and sourcing-request persistence
+- [ ] Consenting pilot with Nairobi parts dealers
