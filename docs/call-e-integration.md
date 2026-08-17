@@ -40,6 +40,8 @@ Fixture plans always use the local fixture adapter, even if the server later swi
 
 The browser reads `GET /api/calls/capabilities` before enabling its live-pilot selector. That endpoint requires all three trusted live bindings; partial configuration remains fixture-only. This presentation gate supplements the server-side execution checks rather than replacing them.
 
+The plan route applies the same capability check before signing or saving a live request. An unconfigured deployment therefore cannot be used through a direct API request to persist real supplier targets, even though fixture planning remains available.
+
 The CALL-E idempotency key is derived from the approval fingerprint. Retrying the same authorized plan therefore targets the same provider task instead of creating another batch.
 
 ### 6. Monitor without dialing again

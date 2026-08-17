@@ -87,6 +87,8 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 
 Live planning also requires `recipientConsentConfirmed: true` and a non-empty `authorizedCallWindow`. Both values are signed into the plan, saved with the durable request, shown during final review, and checked again immediately before the CALL-E SDK can create a batch.
 
+The plan endpoint rejects live requests with `503` before signing or persistence when any trusted live binding is missing. UI availability is therefore only a presentation layer; direct API requests fail closed as well.
+
 ## Key routes
 
 | Route | Method | Side effect |
