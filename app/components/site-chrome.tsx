@@ -9,6 +9,12 @@ const primaryLinks = [
   { href: "/about", label: "About" },
 ];
 
+const mobileLinks = [
+  ...primaryLinks,
+  { href: "/pilot", label: "Pilot evidence" },
+  { href: "/privacy", label: "Privacy" },
+];
+
 export function SiteHeader({ badge }: { badge?: string }) {
   return (
     <header className="site-header">
@@ -19,6 +25,12 @@ export function SiteHeader({ badge }: { badge?: string }) {
       <nav className="site-nav" aria-label="Primary navigation">
         {primaryLinks.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
       </nav>
+      <details className="mobile-nav">
+        <summary aria-label="Open site navigation">Menu</summary>
+        <nav aria-label="Mobile navigation">
+          {mobileLinks.map((link) => <Link href={link.href} key={link.href}>{link.label}</Link>)}
+        </nav>
+      </details>
       {badge && <span className="location-pill"><span className="status-dot" />{badge}</span>}
     </header>
   );
@@ -48,7 +60,7 @@ export function PublicPage({ eyebrow, title, intro, children }: {
 }) {
   return (
     <main>
-      <SiteHeader badge="Private preview" />
+      <SiteHeader badge="Global pilot" />
       <section className="public-hero">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

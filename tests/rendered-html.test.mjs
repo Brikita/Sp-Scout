@@ -35,7 +35,7 @@ test("server-renders every public product page with shared navigation", async ()
     ["/markets", /Global-ready means precise/],
     ["/safety", /real-world side effect/],
     ["/privacy", /Collect what the sourcing decision needs/],
-    ["/pilot", /pilot has not started/i],
+    ["/pilot", /Every attempt stays visible/],
     ["/history", /Your sourcing ledger/],
   ];
 
@@ -47,6 +47,8 @@ test("server-renders every public product page with shared navigation", async ()
     assert.match(html, /How it works/, path);
     assert.match(html, /Privacy/, path);
     assert.match(html, /Try the demo/, path);
+    assert.match(html, /aria-label="Mobile navigation"/, path);
+    assert.match(html, /Global pilot/, path);
   }
 });
 

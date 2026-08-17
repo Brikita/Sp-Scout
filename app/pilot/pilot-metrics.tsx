@@ -5,6 +5,17 @@ import type { PilotMetrics } from "../../lib/pilot-metrics";
 
 const valueOrDash = (value: number | null, suffix = "") => value === null ? "—" : `${value}${suffix}`;
 
+function formatSnapshotTime(value: string | undefined) {
+  if (!value) return "Preparing snapshot";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Time unavailable";
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date) + " UTC";
+}
+
 export function PilotMetricBoard() {
   const [metrics, setMetrics] = useState<PilotMetrics | null>(null);
   const [error, setError] = useState(false);
@@ -24,7 +35,7 @@ export function PilotMetricBoard() {
   const hasPilot = Boolean(metrics?.liveRequests);
   const measures = [
     [valueOrDash(metrics?.medianSourcingMinutes ?? null, " min"), "Median sourcing time", "Request creation to terminal CALL-E result"],
-    [valueOrDash(metrics?.contactRate ?? null, "%"), "Successful contact rate", "Completed supplier results ÷ attempted suppliers"],
+    [valueOrDash(metrics?.contactRate ?? null, "%"), "Completed-result rate", "Completed supplier records ÷ attempted suppliers"],
     [valueOrDash(metrics?.quoteCompleteness ?? null, "%"), "Quote completeness", "Required structured fields returned"],
     [hasPilot ? String(metrics?.compatibleOptions ?? 0) : "—", "Compatible options", "Fitment-confirmed offers across live requests"],
     [valueOrDash(metrics?.averagePriceSpread ?? null, "%"), "Average price spread", "Verified high-to-low spread where two quotes exist"],
@@ -41,6 +52,22 @@ export function PilotMetricBoard() {
         {measures.map(([value, title, definition]) => (
           <article key={title}><p>{error ? "Unavailable" : metrics ? value : "Loading verified records"}</p><h2>{title}</h2><span>{definition}</span></article>
         ))}
+      </section>
+      <section className="pilot-audit" aria-label="Pilot metric denominators">
+        <div>
+          <p className="section-kicker">Evidence denominator</p>
+          <h2>Every attempt stays visible.</h2>
+          <p>Counts come from durable live CALL-E records. Fixtures, failures, and incomplete outcomes are never silently converted into successes.</p>
+          <a href="/api/pilot/metrics">Open machine-readable evidence snapshot <span aria-hidden="true">→</span></a>
+        </div>
+        <dl>
+          <div><dt>Live requests</dt><dd>{metrics?.liveRequests ?? 0}</dd></div>
+          <div><dt>Completed requests</dt><dd>{metrics?.completedRequests ?? 0}</dd></div>
+          <div><dt>Supplier attempts</dt><dd>{metrics?.supplierAttempts ?? 0}</dd></div>
+          <div><dt>Completed supplier results</dt><dd>{metrics?.successfulContacts ?? 0}</dd></div>
+          <div><dt>Fixtures excluded</dt><dd>{metrics?.fixtureRunsExcluded ?? 0}</dd></div>
+          <div><dt>Snapshot generated</dt><dd className="pilot-time">{formatSnapshotTime(metrics?.generatedAt)}</dd></div>
+        </dl>
       </section>
     </>
   );
