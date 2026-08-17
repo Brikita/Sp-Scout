@@ -44,7 +44,7 @@ The CALL-E idempotency key is derived from the approval fingerprint. Retrying th
 
 ### 6. Monitor without dialing again
 
-Queued or in-progress runs use `GET /api/calls/status/:requestId/:callId`. The route verifies that the call belongs to a saved live request and invokes only `client.calls.get`. It persists each canonical status update and cannot create a call.
+Queued or in-progress runs use `GET /api/calls/status/:requestId/:callId`. The route requires the same request-specific history credential, verifies its hash and that the call belongs to a saved live request, then invokes only `client.calls.get`. It persists each canonical status update and cannot create a call. Reopening Request History repeats this GET-only refresh for a non-terminal live run, so closing the original browser flow does not strand the durable record.
 
 Terminal statuses are `completed`, `failed`, or `canceled`. Failures remain visible and never become quotes.
 

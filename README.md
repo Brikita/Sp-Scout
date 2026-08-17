@@ -40,7 +40,7 @@ flowchart LR
 - A live-pilot selector that stays disabled until the trusted server confirms mode, API key, and approval secret are all configured.
 - Durable D1 requests, suppliers, approvals, call runs, quotes, and evidence.
 - A user-facing sourcing ledger protected by a separate random per-request history credential; only its SHA-256 hash is stored server-side.
-- Read-only live status polling that cannot start another call.
+- Credential-protected, read-only live status polling that cannot start another call and resumes from Request History after a browser interruption.
 - Masked supplier numbers in plans and history responses.
 - Seventeen current CALL-E recipient regions with market-specific language, currency, delivery, budget, and fixture configuration.
 - About, workflow, markets, safety, privacy, and pilot-evidence pages.
@@ -90,7 +90,7 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 | `/api/calls/capabilities` | `GET` | Reports fixture/live availability; never starts a call. |
 | `/api/calls/plan` | `POST` | Saves a plan; never starts a call. |
 | `/api/calls/execute` | `POST` | Starts only the explicitly approved plan. |
-| `/api/calls/status/:requestId/:callId` | `GET` | Retrieves an existing live run; cannot create one. |
+| `/api/calls/status/:requestId/:callId` | `GET` | With the request history credential, retrieves and persists an existing live run; cannot create one. |
 | `/api/sourcing/requests/:id` | `GET` | Returns masked durable request history only with its bearer history credential. |
 | `/api/pilot/metrics` | `GET` | Aggregates live pilot evidence and excludes fixtures. |
 

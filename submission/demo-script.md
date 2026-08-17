@@ -28,6 +28,8 @@ Reveal the offer cards. Compare compatibility, brand, condition, price, stock, d
 
 Open **Request history**. Show that the completed workflow is a durable audit record rather than a transient animation, while the supplier numbers remain masked and the history endpoint requires its separate browser-held credential.
 
+Explain the recovery path: if a live sourcing tab closes before CALL-E reaches a terminal state, opening or refreshing History securely retrieves the existing run and saves its newest status. It cannot dial again because the recovery route performs only a provider GET.
+
 ## 1:58–2:18 — Separate decision
 
 Select one offer and open the reservation preview. Explain that sourcing approval did not grant purchasing authority and no reservation call has started.

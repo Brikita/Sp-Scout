@@ -28,6 +28,7 @@ The public path is a safe no-call fixture. The trusted backend implements the re
 - Seventeen supported CALL-E regions with market-aware language and currency.
 - Automated pilot metrics that include only durable live records and exclude every fixture.
 - A private, browser-authorized sourcing ledger backed by durable D1 records and hashed per-request history credentials.
+- Interruption-safe recovery that refreshes an existing non-terminal CALL-E run from History without creating another call.
 
 ## Technical challenges
 
