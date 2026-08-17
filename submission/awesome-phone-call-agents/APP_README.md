@@ -12,11 +12,12 @@ Independent parts businesses often hold current inventory that is absent or stal
 
 1. Enter the vehicle, part, fitment reference, budget, delivery location, market, and call language.
 2. Review the exact information-only call task and masked recipients.
-3. Explicitly approve the signed, 15-minute sourcing plan.
-4. Run the fixture or let the trusted server create one idempotent CALL-E batch.
-5. Monitor only that existing run and persist every canonical status.
-6. Compare structured supplier results with evidence and incomplete-data warnings.
-7. Reopen the masked audit record from the browser-authorized History page.
+3. For live mode, attest direct recipient consent and record the authorized calling window.
+4. Explicitly approve the signed, 15-minute sourcing plan.
+5. Run the fixture or let the trusted server create one idempotent CALL-E batch.
+6. Monitor only that existing run and persist every canonical status.
+7. Compare structured supplier results with evidence and incomplete-data warnings.
+8. Reopen the masked audit record from the browser-authorized History page.
 
 Selecting an offer never purchases, pays for, or reserves a part.
 
@@ -55,6 +56,7 @@ The live selector stays disabled unless mode, API key, and approval secret are a
 
 - `POST /api/calls/plan` validates and saves a preview; it never starts a call.
 - `POST /api/calls/execute` can place outbound calls only for an explicitly approved live plan.
+- Live plans are rejected unless direct recipient consent and an authorized calling window are signed into the request; the server checks both again before SDK execution.
 - One approved plan targets its listed business numbers once using a stable provider idempotency key.
 - `GET /api/calls/status/:requestId/:callId` requires the request history credential and retrieves only an existing run. It cannot dial again.
 - The app creates no recurring jobs and has no payment, purchase, or reservation capability.

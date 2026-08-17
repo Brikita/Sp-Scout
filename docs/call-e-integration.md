@@ -10,7 +10,7 @@ SpareScout uses `@call-e/calle` from a trusted Cloudflare Worker-compatible serv
 
 ### 1. Validate the complete request
 
-`parseSourcingRequest` requires vehicle, part, fitment reference, positive budget, currency, delivery location, deadline, a documented CALL-E region/language pair, and one to ten unique E.164 suppliers. Missing routing values are rejected rather than guessed.
+`parseSourcingRequest` requires vehicle, part, fitment reference, positive budget, currency, delivery location, deadline, a documented CALL-E region/language pair, and one to ten unique E.164 suppliers. A live request additionally requires a direct-recipient-consent attestation and an authorized calling window. Missing values are rejected rather than guessed.
 
 ### 2. Construct a bounded task
 
@@ -36,7 +36,7 @@ No external call starts in this step.
 
 ### 5. Execute exactly once
 
-Fixture plans always use the local fixture adapter, even if the server later switches to live mode. Live plans require `CALLE_MODE=live`, `CALLE_API_KEY`, and a production approval secret.
+Fixture plans always use the local fixture adapter, even if the server later switches to live mode. Live plans require `CALLE_MODE=live`, `CALLE_API_KEY`, a production approval secret, direct-recipient consent, and an authorized calling window. The consent fields are signed into the plan, persisted with the request, and checked again immediately before SDK execution.
 
 The browser reads `GET /api/calls/capabilities` before enabling its live-pilot selector. That endpoint requires all three trusted live bindings; partial configuration remains fixture-only. This presentation gate supplements the server-side execution checks rather than replacing them.
 

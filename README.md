@@ -35,6 +35,7 @@ flowchart LR
 - Strict aggregate and per-supplier JSON result schemas.
 - AI identity disclosure and information-only call instructions.
 - Signed, 15-minute approval tokens bound to the complete plan.
+- Server-enforced direct-consent attestation and an authorized calling window for every live plan.
 - Provider idempotency derived from the approved plan.
 - Safe fixture execution that cannot become live through a configuration change.
 - A live-pilot selector that stays disabled until the trusted server confirms mode, API key, and approval secret are all configured.
@@ -83,6 +84,8 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 | `SPARESCOUT_APPROVAL_SECRET` | HMAC secret for signed live approval tokens. |
 
 `CALLE_MODE=live` is not sufficient by itself. A request must also have been planned as `executionMode: "live"`, carry a valid unexpired signature, and be submitted with `approved: true`.
+
+Live planning also requires `recipientConsentConfirmed: true` and a non-empty `authorizedCallWindow`. Both values are signed into the plan, saved with the durable request, shown during final review, and checked again immediately before the CALL-E SDK can create a batch.
 
 ## Key routes
 

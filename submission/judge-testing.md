@@ -28,4 +28,4 @@
 - Audio quality, interruption handling, and transcript accuracy.
 - Real contact, quote-completeness, fitment, timing, and price-spread metrics.
 
-No live test should be inferred from these instructions. It requires a consenting number, an exact call goal, and explicit approval for that specific run.
+No live test should be inferred from these instructions. It requires consenting business numbers, a recorded authorized calling window, an exact call goal, and explicit approval for that specific run.

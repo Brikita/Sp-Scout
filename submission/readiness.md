@@ -9,7 +9,7 @@ SpareScout is product-complete for a no-call judge walkthrough and has a real se
 | Complete product experience | Ready | Home, About, How it works, Markets, Safety, Privacy, History, and pilot-metrics surfaces are implemented. |
 | Global adaptability | Ready | Seventeen CALL-E recipient regions, market-aware currencies, and supported call languages are versioned in the application. |
 | Safe judge path | Ready | Deterministic fixture is the default and never calls a real number. |
-| Real CALL-E runtime | Implemented, not pilot-proven | Official server SDK, signed approval, stable idempotency, durable monitoring, and structured results are implemented. Run only an explicitly approved consenting-supplier test. |
+| Real CALL-E runtime | Implemented, not pilot-proven | Official server SDK, signed approval, direct-consent/window enforcement, stable idempotency, durable monitoring, and structured results are implemented. Run only an explicitly approved consenting-supplier test. |
 | Automated verification | Ready | `npm run check` builds, renders, tests contracts, and lints the project. |
 | Durable pilot metrics | Infrastructure ready | Live-only calculations exclude fixtures. Populate them with the approved pilot; do not invent results. |
 | Public functional demo | Needs authorization | Current Sites deployment is private and owner-only. Publish a judge-accessible deployment after the user approves public release. |
