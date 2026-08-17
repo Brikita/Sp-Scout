@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import type { SourcingExecution } from "../lib/calle/contracts.ts";
+import { isTerminalExecution, type SourcingExecution } from "../lib/calle/contracts.ts";
 
 type Stage = "request" | "plan" | "calling" | "results";
 
@@ -114,6 +114,7 @@ export default function Home() {
   const [execution, setExecution] = useState<SourcingExecution | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   const [form, setForm] = useState({
     vehicle: "2014 Toyota Fielder",
     part: "Front-left wheel bearing",
@@ -174,29 +175,71 @@ export default function Home() {
     }
   };
 
-  const runDryDemo = async () => {
-    if (!approvalToken) return;
+  const pollLiveExecution = async (requestId: string, initial: SourcingExecution) => {
+    let current = initial;
+    let temporaryFailures = 0;
+    for (let attempt = 0; attempt < 120 && !isTerminalExecution(current); attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+      const response = await fetch(
+        `/api/calls/status/${encodeURIComponent(requestId)}/${encodeURIComponent(current.callId)}`,
+        { cache: "no-store" },
+      );
+      const payload = await response.json() as { execution?: SourcingExecution; error?: string };
+      if (!response.ok || !payload.execution) {
+        temporaryFailures += 1;
+        if (temporaryFailures < 4) continue;
+        throw new Error(payload.error ?? "The call status could not be refreshed. Your run remains saved.");
+      }
+      temporaryFailures = 0;
+      current = payload.execution;
+      setExecution(current);
+      setActiveActivity((value) => Math.min(callActivity.length - 1, value + 1));
+    }
+    if (!isTerminalExecution(current)) {
+      throw new Error("The calls are still running and remain saved. Refresh their status again shortly.");
+    }
+    return current;
+  };
+
+  const approveCalls = async () => {
+    if (!approvalToken || isExecuting) return;
     setStage("calling");
     setActiveActivity(0);
     setRequestError(null);
+    setIsExecuting(true);
     const executionRequest = fetch("/api/calls/execute", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ approvalToken, approved: true }),
     });
     try {
-      for (let index = 1; index < callActivity.length; index += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 500));
-        setActiveActivity(index);
-      }
       const response = await executionRequest;
-      const payload = await response.json() as { execution?: SourcingExecution; error?: string };
+      const payload = await response.json() as { execution?: SourcingExecution; requestId?: string; error?: string };
       if (!response.ok || !payload.execution) throw new Error(payload.error ?? "Unable to run the approved fixture.");
-      setExecution(payload.execution);
+      let finalExecution = payload.execution;
+      setExecution(finalExecution);
+      if (finalExecution.mode === "fixture") {
+        for (let index = 1; index < callActivity.length; index += 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 350));
+          setActiveActivity(index);
+        }
+      } else if (!isTerminalExecution(finalExecution)) {
+        if (!payload.requestId) throw new Error("The call run was created without a tracking id.");
+        finalExecution = await pollLiveExecution(payload.requestId, finalExecution);
+      }
+      if (finalExecution.status === "failed" || finalExecution.status === "canceled") {
+        throw new Error(finalExecution.summary ?? `The call run ended with status ${finalExecution.status}.`);
+      }
+      if (!finalExecution.quotes.length) {
+        throw new Error("The calls completed without a usable quote. Review the saved run before trying again.");
+      }
+      setExecution(finalExecution);
       setStage("results");
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : "Unable to run the approved fixture.");
       setStage("plan");
+    } finally {
+      setIsExecuting(false);
     }
   };
 
@@ -207,6 +250,7 @@ export default function Home() {
     setApprovalToken(null);
     setExecution(null);
     setRequestError(null);
+    setIsExecuting(false);
   };
 
   return (
@@ -324,7 +368,7 @@ export default function Home() {
                 {suppliers.map((supplier) => <div key={supplier.name}><span className="supplier-index">{supplier.name.charAt(0)}</span><span><strong>{supplier.name}</strong><small>{supplier.phone}</small></span><b>Ready</b></div>)}
               </div>
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>
-              <button className="primary-button light" type="button" onClick={runDryDemo}>Approve 3 demo calls <span>→</span></button>
+              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>Approve 3 demo calls <span>→</span></button>
               {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
               <button className="text-button" type="button" onClick={() => setStage("request")}>Edit request</button>
             </div>
@@ -333,7 +377,7 @@ export default function Home() {
           {stage === "calling" && (
             <div className="calling-state">
               <div className="signal-orbit" aria-hidden="true"><span>SS</span><i /><i /><i /></div>
-              <p className="eyebrow">Calls in progress</p>
+              <p className="eyebrow">{execution?.mode === "live" ? "Live calls in progress" : "Demo calls in progress"}</p>
               <h2>Scout is on the line.</h2>
               <div className="progress-track"><span style={{ width: `${((activeActivity + 1) / callActivity.length) * 100}%` }} /></div>
               <ul className="activity-list">
@@ -343,15 +387,16 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
+              {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
             </div>
           )}
 
           {stage === "results" && (
             <div className="summary-state">
               <p className="eyebrow">Sourcing complete</p>
-              <h2>Two verified options found.</h2>
+              <h2>{displayQuotes.filter((quote) => quote.status === "Verified").length} verified options found.</h2>
               <p>Best verified price is <strong>{formatMoney(bestVerified.price)}</strong>, with evidence attached.</p>
-              <div className="summary-stats"><div><b>{displayQuotes.length}/{suppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>Fixture</b><span>safe mode</span></div></div>
+              <div className="summary-stats"><div><b>{displayQuotes.length}/{suppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>{execution?.mode === "live" ? "Live" : "Fixture"}</b><span>{execution?.mode === "live" ? "CALL-E run" : "safe mode"}</span></div></div>
               <button className="secondary-button" type="button" onClick={resetDemo}>Start another search</button>
             </div>
           )}
