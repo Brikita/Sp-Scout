@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isTerminalExecution, type SourcingExecution } from "../lib/calle/contracts.ts";
 import { getSupportedMarket, SUPPORTED_MARKETS, type SupportedMarket } from "../lib/markets.ts";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
@@ -22,6 +22,7 @@ type Quote = {
 };
 
 type UiSupplier = { id: string; name: string; area: string; phone: string; fixturePhone: string };
+type SupplierDraft = { id: string; name: string; area: string; phone: string };
 
 const supplierTemplates = [
   { id: "independent-dealer", name: "Independent Parts Dealer", area: "Local specialist" },
@@ -35,6 +36,10 @@ function suppliersForMarket(market: SupportedMarket): UiSupplier[] {
     fixturePhone: market.fixturePhones[index],
     phone: market.fixturePhones[index].replace(/\d(?=\d{3})/g, "•"),
   }));
+}
+
+function maskPhoneForDisplay(phone: string): string {
+  return phone.replace(/\d(?=\d{3})/g, "•");
 }
 
 const quotes: Quote[] = [
@@ -85,6 +90,13 @@ const callActivity = [
   "Three conversations normalized into comparable offers",
 ];
 
+const liveCallActivity = [
+  "Approved plan submitted once with a stable idempotency key",
+  "CALL-E accepted the supplier batch",
+  "Refreshing the existing run without redialing",
+  "Terminal supplier results will be normalized and stored",
+];
+
 const formatMoney = (value: number, currency = "KES", locale = "en-KE") =>
   new Intl.NumberFormat(locale, {
     style: "currency",
@@ -127,6 +139,13 @@ export default function Home() {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [executionMode, setExecutionMode] = useState<"fixture" | "live">("fixture");
+  const [liveAvailable, setLiveAvailable] = useState(false);
+  const [liveSuppliers, setLiveSuppliers] = useState<SupplierDraft[]>([
+    { id: "live-supplier-1", name: "", area: "", phone: "" },
+    { id: "live-supplier-2", name: "", area: "", phone: "" },
+    { id: "live-supplier-3", name: "", area: "", phone: "" },
+  ]);
   const [form, setForm] = useState({
     vehicle: "2014 Toyota Fielder",
     part: "Front-left wheel bearing",
@@ -139,15 +158,40 @@ export default function Home() {
   });
 
   const market = useMemo(() => getSupportedMarket(form.countryCode) ?? SUPPORTED_MARKETS[0], [form.countryCode]);
-  const suppliers = useMemo(() => suppliersForMarket(market), [market]);
-  const displayQuotes = useMemo(() => execution ? executionQuotes(execution, suppliers) : quotes, [execution, suppliers]);
+  const fixtureSuppliers = useMemo(() => suppliersForMarket(market), [market]);
+  const activeSuppliers = useMemo<UiSupplier[]>(() => executionMode === "fixture"
+    ? fixtureSuppliers
+    : liveSuppliers.map((supplier) => ({
+        ...supplier,
+        fixturePhone: supplier.phone,
+        phone: maskPhoneForDisplay(supplier.phone),
+      })), [executionMode, fixtureSuppliers, liveSuppliers]);
+  const displayQuotes = useMemo(() => execution ? executionQuotes(execution, activeSuppliers) : quotes, [execution, activeSuppliers]);
   const bestVerified = useMemo(
     () => displayQuotes.filter((quote) => quote.status === "Verified").sort((a, b) => a.price - b.price)[0] ?? displayQuotes[0],
     [displayQuotes],
   );
+  const displayedActivity = execution?.mode === "live" ? liveCallActivity : callActivity;
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/calls/capabilities", { cache: "no-store" })
+      .then(async (response) => {
+        const capabilities = await response.json() as { liveAvailable?: boolean };
+        if (active) setLiveAvailable(Boolean(capabilities.liveAvailable));
+      })
+      .catch(() => { if (active) setLiveAvailable(false); });
+    return () => { active = false; };
+  }, []);
+
+  const updateLiveSupplier = (index: number, field: keyof Omit<SupplierDraft, "id">, value: string) => {
+    setLiveSuppliers((current) => current.map((supplier, supplierIndex) =>
+      supplierIndex === index ? { ...supplier, [field]: value } : supplier,
+    ));
   };
 
   const updateMarket = (countryCode: string) => {
@@ -171,7 +215,7 @@ export default function Home() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          executionMode: "fixture",
+          executionMode,
           vehicle: form.vehicle,
           part: form.part,
           fitmentReference: form.chassis,
@@ -181,7 +225,7 @@ export default function Home() {
           neededBy: form.timing,
           countryCode: market.countryCode,
           locale: form.locale,
-          suppliers: suppliers.map((supplier) => ({
+          suppliers: activeSuppliers.map((supplier) => ({
             id: supplier.id,
             name: supplier.name,
             area: supplier.area,
@@ -221,7 +265,7 @@ export default function Home() {
       temporaryFailures = 0;
       current = payload.execution;
       setExecution(current);
-      setActiveActivity((value) => Math.min(callActivity.length - 1, value + 1));
+      setActiveActivity((value) => Math.min(liveCallActivity.length - 1, value + 1));
     }
     if (!isTerminalExecution(current)) {
       throw new Error("The calls are still running and remain saved. Refresh their status again shortly.");
@@ -243,7 +287,7 @@ export default function Home() {
     try {
       const response = await executionRequest;
       const payload = await response.json() as { execution?: SourcingExecution; requestId?: string; error?: string };
-      if (!response.ok || !payload.execution) throw new Error(payload.error ?? "Unable to run the approved fixture.");
+      if (!response.ok || !payload.execution) throw new Error(payload.error ?? "Unable to run the approved sourcing plan.");
       let finalExecution = payload.execution;
       setExecution(finalExecution);
       if (finalExecution.mode === "fixture") {
@@ -264,7 +308,7 @@ export default function Home() {
       setExecution(finalExecution);
       setStage("results");
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Unable to run the approved fixture.");
+      setRequestError(error instanceof Error ? error.message : "Unable to run the approved sourcing plan.");
       setStage("plan");
     } finally {
       setIsExecuting(false);
@@ -301,13 +345,15 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="mode-banner" role="status">
+      <div className={`mode-banner ${executionMode === "live" ? "live-mode" : ""}`} role="status">
         <span className="mode-icon" aria-hidden="true">◇</span>
         <div>
-          <strong>Safe demo mode</strong>
-          <span>Switch markets and call languages across the supported CALL-E network. No phone calls or reservations will be made.</span>
+          <strong>{executionMode === "live" ? "Live pilot mode" : "Safe demo mode"}</strong>
+          <span>{executionMode === "live"
+            ? "Approving the reviewed plan will place real calls to the three business numbers below."
+            : "Switch markets and call languages across the supported CALL-E network. No phone calls or reservations will be made."}</span>
         </div>
-        <span className="mode-chip">DRY RUN</span>
+        <span className="mode-chip">{executionMode === "live" ? "REAL CALLS" : "DRY RUN"}</span>
       </div>
 
       <section className="workspace" aria-label="Parts sourcing workspace">
@@ -335,6 +381,19 @@ export default function Home() {
                   ))}
                 </select>
               </label>
+              <fieldset className="mode-choice field-wide">
+                <legend>Execution mode</legend>
+                <label className={executionMode === "fixture" ? "selected" : ""} htmlFor="execution-fixture">
+                  <span className="sr-only">Safe fixture execution</span>
+                  <input id="execution-fixture" aria-label="Safe fixture execution" type="radio" name="execution-mode" checked={executionMode === "fixture"} onChange={() => setExecutionMode("fixture")} />
+                  <span><strong>Safe fixture</strong><small>Structured demonstration; no dialing.</small></span>
+                </label>
+                <label className={`${executionMode === "live" ? "selected" : ""} ${!liveAvailable ? "disabled" : ""}`} htmlFor="execution-live">
+                  <span className="sr-only">Live pilot execution</span>
+                  <input id="execution-live" aria-label="Live pilot execution" type="radio" name="execution-mode" checked={executionMode === "live"} disabled={!liveAvailable} onChange={() => setExecutionMode("live")} />
+                  <span><strong>Live pilot</strong><small>{liveAvailable ? "Real calls after plan approval." : "Requires trusted server configuration."}</small></span>
+                </label>
+              </fieldset>
               <label className="field field-wide">
                 <span>Vehicle</span>
                 <input value={form.vehicle} onChange={(event) => updateField("vehicle", event.target.value)} required />
@@ -362,6 +421,19 @@ export default function Home() {
                 <span>Delivery area</span>
                 <input value={form.location} onChange={(event) => updateField("location", event.target.value)} required />
               </label>
+              {executionMode === "live" && (
+                <fieldset className="supplier-editor field-wide">
+                  <legend>Authorized supplier contacts</legend>
+                  <p>Enter business numbers that are authorized for this pilot. E.164 format is required.</p>
+                  {liveSuppliers.map((supplier, index) => (
+                    <div className="supplier-editor-row" key={supplier.id}>
+                      <label><span>Supplier {index + 1}</span><input value={supplier.name} onChange={(event) => updateLiveSupplier(index, "name", event.target.value)} placeholder="Business name" required /></label>
+                      <label><span>Area</span><input value={supplier.area} onChange={(event) => updateLiveSupplier(index, "area", event.target.value)} placeholder="City or district" required /></label>
+                      <label><span>E.164 phone</span><input type="tel" value={supplier.phone} onChange={(event) => updateLiveSupplier(index, "phone", event.target.value)} placeholder="+15551234567" pattern="\+[1-9][0-9]{7,14}" required /></label>
+                    </div>
+                  ))}
+                </fieldset>
+              )}
             </div>
             <button className="primary-button" type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Preparing signed plan…" : "Review supplier call plan"} <span aria-hidden="true">→</span>
@@ -379,7 +451,7 @@ export default function Home() {
               <h2>Three dealers are ready to check.</h2>
               <p>Complete the request to preview exactly what SpareScout will ask each supplier.</p>
               <ul className="supplier-mini-list">
-                {suppliers.map((supplier) => <li key={supplier.name}><span>{supplier.name}</span><small>{supplier.area}</small></li>)}
+                {activeSuppliers.map((supplier, index) => <li key={supplier.id}><span>{supplier.name || `Supplier ${index + 1}`}</span><small>{supplier.area || "Contact details required"}</small></li>)}
               </ul>
             </div>
           )}
@@ -400,10 +472,10 @@ export default function Home() {
                 </ol>
               </div>
               <div className="call-targets">
-                {suppliers.map((supplier) => <div key={supplier.name}><span className="supplier-index">{supplier.name.charAt(0)}</span><span><strong>{supplier.name}</strong><small>{supplier.phone}</small></span><b>Ready</b></div>)}
+                {activeSuppliers.map((supplier) => <div key={supplier.id}><span className="supplier-index">{supplier.name.charAt(0)}</span><span><strong>{supplier.name}</strong><small>{supplier.phone}</small></span><b>Ready</b></div>)}
               </div>
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>
-              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>Approve 3 demo calls <span>→</span></button>
+              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>{executionMode === "live" ? "Approve 3 supplier calls" : "Approve 3 demo calls"} <span>→</span></button>
               {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
               <button className="text-button" type="button" onClick={() => setStage("request")}>Edit request</button>
             </div>
@@ -413,10 +485,10 @@ export default function Home() {
             <div className="calling-state">
               <div className="signal-orbit" aria-hidden="true"><span>SS</span><i /><i /><i /></div>
               <p className="eyebrow">{execution?.mode === "live" ? "Live calls in progress" : "Demo calls in progress"}</p>
-              <h2>Scout is on the line.</h2>
-              <div className="progress-track"><span style={{ width: `${((activeActivity + 1) / callActivity.length) * 100}%` }} /></div>
+              <h2>{execution?.mode === "live" ? "Scout is on the line." : "Scout is simulating the workflow."}</h2>
+              <div className="progress-track"><span style={{ width: `${((activeActivity + 1) / displayedActivity.length) * 100}%` }} /></div>
               <ul className="activity-list">
-                {callActivity.slice(0, activeActivity + 1).map((activity, index) => (
+                {displayedActivity.slice(0, activeActivity + 1).map((activity, index) => (
                   <li key={activity} className={index === activeActivity ? "active" : "done"}>
                     <span>{index < activeActivity ? "✓" : "●"}</span>{activity}
                   </li>
@@ -431,7 +503,7 @@ export default function Home() {
               <p className="eyebrow">Sourcing complete</p>
               <h2>{displayQuotes.filter((quote) => quote.status === "Verified").length} verified options found.</h2>
               <p>Best verified price is <strong>{formatMoney(bestVerified.price, market.currency, form.locale)}</strong>, with evidence attached.</p>
-              <div className="summary-stats"><div><b>{displayQuotes.length}/{suppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>{execution?.mode === "live" ? "Live" : "Fixture"}</b><span>{execution?.mode === "live" ? "CALL-E run" : "safe mode"}</span></div></div>
+              <div className="summary-stats"><div><b>{displayQuotes.length}/{activeSuppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>{execution?.mode === "live" ? "Live" : "Fixture"}</b><span>{execution?.mode === "live" ? "CALL-E run" : "safe mode"}</span></div></div>
               <button className="secondary-button" type="button" onClick={resetDemo}>Start another search</button>
             </div>
           )}
