@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { isTerminalExecution, type SourcingExecution } from "../lib/calle/contracts.ts";
 import { getSupportedMarket, SUPPORTED_MARKETS, type SupportedMarket } from "../lib/markets.ts";
+import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
 type Stage = "request" | "plan" | "calling" | "results";
 
@@ -282,16 +283,7 @@ export default function Home() {
 
   return (
     <main>
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label="SpareScout home">
-          <span className="brand-mark" aria-hidden="true">S</span>
-          <span>SpareScout</span>
-        </a>
-        <div className="header-actions">
-          <span className="location-pill"><span className="status-dot" />{market.countryName} · {market.countryCode}</span>
-          <button className="avatar" aria-label="Open account menu">BK</button>
-        </div>
-      </header>
+      <SiteHeader badge={`${market.countryName} · ${market.countryCode}`} />
 
       <section className="hero" id="top">
         <div className="hero-copy">
@@ -471,7 +463,7 @@ export default function Home() {
         </section>
       )}
 
-      <footer><p>Built for people who know that the right answer is often still on the other end of a phone.</p><span>Powered by CALL-E · 17 supported markets · Approval gated</span></footer>
+      <SiteFooter />
     </main>
   );
 }
