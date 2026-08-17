@@ -2,11 +2,17 @@ import { signApproval } from "../../../../lib/calle/approval";
 import { createSourcingCallPlan, maskPhone, parseSourcingRequest } from "../../../../lib/calle/contracts";
 import { savePlannedRequest } from "../../../../db/sourcing";
 import { createHistoryAccessCredential } from "../../../../lib/history-access";
-import { getApprovalSecret, getCalleRuntimeConfig } from "../runtime";
+import { getApprovalSecret, getCalleCapabilities, getCalleRuntimeConfig } from "../runtime";
 
 export async function POST(request: Request) {
   try {
     const input = parseSourcingRequest(await request.json());
+    if (input.executionMode === "live" && !getCalleCapabilities().liveAvailable) {
+      return Response.json(
+        { error: "Live planning is unavailable until every trusted CALL-E runtime binding is configured." },
+        { status: 503 },
+      );
+    }
     const plan = createSourcingCallPlan(input);
     const config = getCalleRuntimeConfig();
     const approvalToken = await signApproval(plan, getApprovalSecret(config.mode));

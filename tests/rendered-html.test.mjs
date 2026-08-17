@@ -53,10 +53,11 @@ test("server-renders every public product page with shared navigation", async ()
 });
 
 test("keeps real-world side effects behind explicit approval", async () => {
-  const [page, layout, packageJson, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
+  const [page, layout, packageJson, planRoute, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/calls/plan/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/sourcing/requests/[id]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/calls/status/[requestId]/[callId]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/history/history-ledger.tsx", import.meta.url), "utf8"),
@@ -71,6 +72,9 @@ test("keeps real-world side effects behind explicit approval", async () => {
   assert.match(layout, /SpareScout — Phone-powered parts sourcing/);
   assert.doesNotMatch(layout, /codex-preview|_sites-preview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
+  assert.match(planRoute, /input\.executionMode === "live" && !getCalleCapabilities\(\)\.liveAvailable/);
+  assert.match(planRoute, /status: 503/);
+  assert.ok(planRoute.indexOf("getCalleCapabilities().liveAvailable") < planRoute.indexOf("await savePlannedRequest("));
   assert.match(historyRoute, /authorization/);
   assert.match(historyRoute, /hashHistoryAccessToken/);
   assert.match(statusRoute, /authorization/);
