@@ -1,5 +1,5 @@
 import { getSourcingRequestHistory } from "../../../../../db/sourcing";
-import { hashHistoryAccessToken } from "../../../../../lib/history-access";
+import { hashHistoryAccessToken, historyTokenFromAuthorization } from "../../../../../lib/history-access";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -9,8 +9,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     if (!UUID_PATTERN.test(id)) {
       return Response.json({ error: "A valid sourcing request id is required." }, { status: 400 });
     }
-    const authorization = request.headers.get("authorization");
-    const token = authorization?.match(/^Bearer ([A-Za-z0-9_-]{40,64})$/)?.[1];
+    const token = historyTokenFromAuthorization(request.headers.get("authorization"));
     if (!token) {
       return Response.json({ error: "History access is required." }, { status: 401 });
     }

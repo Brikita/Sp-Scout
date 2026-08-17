@@ -51,11 +51,12 @@ test("server-renders every public product page with shared navigation", async ()
 });
 
 test("keeps real-world side effects behind explicit approval", async () => {
-  const [page, layout, packageJson, historyRoute] = await Promise.all([
+  const [page, layout, packageJson, historyRoute, statusRoute] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../app/api/sourcing/requests/[id]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/calls/status/[requestId]/[callId]/route.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /Approve 3 demo calls/);
@@ -68,4 +69,7 @@ test("keeps real-world side effects behind explicit approval", async () => {
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(historyRoute, /authorization/);
   assert.match(historyRoute, /hashHistoryAccessToken/);
+  assert.match(statusRoute, /authorization/);
+  assert.match(statusRoute, /hashHistoryAccessToken/);
+  assert.doesNotMatch(statusRoute, /calls\.create|executeSourcingPlan/);
 });

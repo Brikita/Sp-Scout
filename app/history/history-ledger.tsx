@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   forgetHistoryAccess,
   readRememberedHistoryAccess,
+  shouldRefreshHistoryRun,
   type RememberedHistoryAccess,
 } from "../../lib/history-store";
 
@@ -48,7 +49,7 @@ type HistoryRequest = {
   suppliers: Supplier[];
   runs: Run[];
 };
-type LedgerItem = { access: RememberedHistoryAccess; request?: HistoryRequest; error?: string };
+type LedgerItem = { access: RememberedHistoryAccess; request?: HistoryRequest; error?: string; notice?: string };
 
 function label(value: string): string {
   return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
@@ -71,15 +72,32 @@ function formatMoney(amount: unknown, request: HistoryRequest): string {
   }
 }
 
+async function fetchHistory(access: RememberedHistoryAccess): Promise<HistoryRequest> {
+  const response = await fetch(`/api/sourcing/requests/${encodeURIComponent(access.requestId)}`, {
+    cache: "no-store",
+    headers: { authorization: `Bearer ${access.token}` },
+  });
+  const payload = await response.json() as { request?: HistoryRequest; error?: string };
+  if (!response.ok || !payload.request) throw new Error(payload.error ?? "This request could not be reopened.");
+  return payload.request;
+}
+
 async function loadItem(access: RememberedHistoryAccess): Promise<LedgerItem> {
   try {
-    const response = await fetch(`/api/sourcing/requests/${encodeURIComponent(access.requestId)}`, {
-      cache: "no-store",
-      headers: { authorization: `Bearer ${access.token}` },
-    });
-    const payload = await response.json() as { request?: HistoryRequest; error?: string };
-    if (!response.ok || !payload.request) throw new Error(payload.error ?? "This request could not be reopened.");
-    return { access, request: payload.request };
+    let request = await fetchHistory(access);
+    const activeRun = request.runs.find(shouldRefreshHistoryRun);
+    if (!activeRun) return { access, request };
+
+    const response = await fetch(
+      `/api/calls/status/${encodeURIComponent(request.id)}/${encodeURIComponent(activeRun.id)}`,
+      { cache: "no-store", headers: { authorization: `Bearer ${access.token}` } },
+    );
+    const payload = await response.json() as { error?: string };
+    if (!response.ok) {
+      return { access, request, notice: payload.error ?? "The latest live status could not be refreshed." };
+    }
+    request = await fetchHistory(access);
+    return { access, request };
   } catch (error) {
     return { access, error: error instanceof Error ? error.message : "This request could not be reopened." };
   }
@@ -144,6 +162,7 @@ export function HistoryLedger() {
               <span key={supplier.id}><strong>{supplier.name}</strong>{supplier.area ?? "Area not supplied"} · {supplier.phone}</span>
             ))}
           </div>
+          {item.notice && <p className="history-notice" role="status">{item.notice} The last durable status is shown below.</p>}
           {!item.request.runs.length ? (
             <p className="history-pending">Plan saved. No approved call run has been recorded.</p>
           ) : item.request.runs.map((run) => (

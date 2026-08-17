@@ -1,4 +1,5 @@
 const TOKEN_BYTES = 32;
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{40,64}$/;
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -19,4 +20,10 @@ export async function createHistoryAccessCredential(): Promise<{ token: string; 
   const bytes = crypto.getRandomValues(new Uint8Array(TOKEN_BYTES));
   const token = toBase64Url(bytes);
   return { token, hash: await hashHistoryAccessToken(token) };
+}
+
+export function historyTokenFromAuthorization(authorization: string | null): string | null {
+  if (!authorization?.startsWith("Bearer ")) return null;
+  const token = authorization.slice(7);
+  return TOKEN_PATTERN.test(token) ? token : null;
 }

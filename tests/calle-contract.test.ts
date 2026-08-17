@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { signApproval, verifyApproval } from "../lib/calle/approval.ts";
 import { calculateCalleCapabilities } from "../lib/calle/capabilities.ts";
-import { createHistoryAccessCredential, hashHistoryAccessToken } from "../lib/history-access.ts";
-import { parseRememberedHistoryAccess } from "../lib/history-store.ts";
+import { createHistoryAccessCredential, hashHistoryAccessToken, historyTokenFromAuthorization } from "../lib/history-access.ts";
+import { parseRememberedHistoryAccess, shouldRefreshHistoryRun } from "../lib/history-store.ts";
 import {
   buildCallTask,
   createSourcingCallPlan,
@@ -61,6 +61,9 @@ test("issues separate high-entropy credentials for private durable history", asy
   assert.equal(await hashHistoryAccessToken(first.token), first.hash);
   assert.notEqual(first.token, second.token);
   assert.notEqual(first.hash, second.hash);
+  assert.equal(historyTokenFromAuthorization(`Bearer ${first.token}`), first.token);
+  assert.equal(historyTokenFromAuthorization(first.token), null);
+  assert.equal(historyTokenFromAuthorization("Bearer short"), null);
 });
 
 test("accepts only bounded, well-formed browser history capabilities", () => {
@@ -73,6 +76,13 @@ test("accepts only bounded, well-formed browser history capabilities", () => {
   assert.deepEqual(parseRememberedHistoryAccess("not-json"), []);
   assert.deepEqual(parseRememberedHistoryAccess(JSON.stringify([{ ...valid, token: "short" }])), []);
   assert.equal(parseRememberedHistoryAccess(JSON.stringify(Array(25).fill(valid))).length, 20);
+});
+
+test("resumes only non-terminal live history runs", () => {
+  assert.equal(shouldRefreshHistoryRun({ mode: "live", status: "queued" }), true);
+  assert.equal(shouldRefreshHistoryRun({ mode: "live", status: "in_progress" }), true);
+  assert.equal(shouldRefreshHistoryRun({ mode: "live", status: "completed" }), false);
+  assert.equal(shouldRefreshHistoryRun({ mode: "fixture", status: "queued" }), false);
 });
 
 test("defines a valid localized configuration for every supported CALL-E market", () => {

@@ -4,6 +4,7 @@ const STORAGE_KEY = "sparescout.history-access.v1";
 const MAX_REMEMBERED_REQUESTS = 20;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{40,64}$/;
+const TERMINAL_RUN_STATUSES = new Set(["completed", "failed", "canceled"]);
 
 function validEntry(value: unknown): value is RememberedHistoryAccess {
   if (!value || typeof value !== "object") return false;
@@ -51,4 +52,8 @@ export function forgetHistoryAccess(requestId: string): void {
   } catch {
     // Nothing else to do when browser storage is unavailable.
   }
+}
+
+export function shouldRefreshHistoryRun(run: { mode: string; status: string }): boolean {
+  return run.mode === "live" && !TERMINAL_RUN_STATUSES.has(run.status);
 }

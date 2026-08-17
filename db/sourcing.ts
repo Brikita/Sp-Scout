@@ -329,6 +329,7 @@ export async function getSourcingRequestHistory(
 export async function getLiveCallContext(
   requestId: string,
   providerCallId: string,
+  historyAccessHash: string,
   db = getD1(),
 ) {
   await ensureSourcingStorage(db);
@@ -336,8 +337,8 @@ export async function getLiveCallContext(
     `SELECT request.execution_mode
      FROM sourcing_requests AS request
      INNER JOIN call_runs AS run ON run.request_id = request.id
-     WHERE request.id = ? AND run.provider_call_id = ?`,
-  ).bind(requestId, providerCallId).first<LiveRunRow>();
+     WHERE request.id = ? AND run.provider_call_id = ? AND request.history_access_hash = ?`,
+  ).bind(requestId, providerCallId, historyAccessHash).first<LiveRunRow>();
   if (!run || run.execution_mode !== "live") return null;
 
   const { results } = await db.prepare(

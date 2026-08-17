@@ -223,6 +223,7 @@ footer { border-top: 1px solid var(--line); margin: 0 clamp(22px, 5vw, 76px); pa
 .history-suppliers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 12px; background: var(--line); border: 1px solid var(--line); }
 .history-suppliers span { display: block; padding: 14px 16px; background: var(--card); color: var(--muted); font-size: 9px; line-height: 1.5; }.history-suppliers strong { display: block; color: var(--ink); font-size: 11px; }
 .history-pending { margin: 20px 0 0; padding: 15px 17px; background: #f6e7cf; color: #7a633f; font-size: 11px; }
+.history-notice { margin: 20px 0 0; padding: 15px 17px; background: #f3dcd5; color: #803f31; font-size: 11px; }
 .history-run { display: grid; grid-template-columns: minmax(230px, .7fr) minmax(0, 1.3fr); gap: 40px; margin-top: 28px; padding: 26px; background: var(--ink); color: white; }
 .history-run > div:first-child > strong { display: block; color: #c4ccc6; font-size: 13px; line-height: 1.55; }.history-run .section-kicker { color: var(--acid); }
 .history-quotes { display: grid; gap: 8px; }

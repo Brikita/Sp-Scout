@@ -136,6 +136,7 @@ export default function Home() {
   const [selectedQuote, setSelectedQuote] = useState<number | null>(null);
   const [reservationReady, setReservationReady] = useState(false);
   const [approvalToken, setApprovalToken] = useState<string | null>(null);
+  const [historyAccessToken, setHistoryAccessToken] = useState<string | null>(null);
   const [execution, setExecution] = useState<SourcingExecution | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -240,7 +241,10 @@ export default function Home() {
         error?: string;
       };
       if (!response.ok || !payload.approvalToken) throw new Error(payload.error ?? "Unable to prepare the call plan.");
-      if (payload.historyAccess) rememberHistoryAccess(payload.historyAccess);
+      if (payload.historyAccess) {
+        rememberHistoryAccess(payload.historyAccess);
+        setHistoryAccessToken(payload.historyAccess.token);
+      }
       setApprovalToken(payload.approvalToken);
       setStage("plan");
       setSelectedQuote(null);
@@ -253,14 +257,14 @@ export default function Home() {
     }
   };
 
-  const pollLiveExecution = async (requestId: string, initial: SourcingExecution) => {
+  const pollLiveExecution = async (requestId: string, initial: SourcingExecution, accessToken: string) => {
     let current = initial;
     let temporaryFailures = 0;
     for (let attempt = 0; attempt < 120 && !isTerminalExecution(current); attempt += 1) {
       await new Promise((resolve) => window.setTimeout(resolve, 3000));
       const response = await fetch(
         `/api/calls/status/${encodeURIComponent(requestId)}/${encodeURIComponent(current.callId)}`,
-        { cache: "no-store" },
+        { cache: "no-store", headers: { authorization: `Bearer ${accessToken}` } },
       );
       const payload = await response.json() as { execution?: SourcingExecution; error?: string };
       if (!response.ok || !payload.execution) {
@@ -303,7 +307,8 @@ export default function Home() {
         }
       } else if (!isTerminalExecution(finalExecution)) {
         if (!payload.requestId) throw new Error("The call run was created without a tracking id.");
-        finalExecution = await pollLiveExecution(payload.requestId, finalExecution);
+        if (!historyAccessToken) throw new Error("The private history credential is unavailable. The saved run was not polled again.");
+        finalExecution = await pollLiveExecution(payload.requestId, finalExecution, historyAccessToken);
       }
       if (finalExecution.status === "failed" || finalExecution.status === "canceled") {
         throw new Error(finalExecution.summary ?? `The call run ended with status ${finalExecution.status}.`);
@@ -326,6 +331,7 @@ export default function Home() {
     setSelectedQuote(null);
     setReservationReady(false);
     setApprovalToken(null);
+    setHistoryAccessToken(null);
     setExecution(null);
     setRequestError(null);
     setIsExecuting(false);
