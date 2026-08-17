@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { signApproval, verifyApproval } from "../lib/calle/approval.ts";
+import { calculateCalleCapabilities } from "../lib/calle/capabilities.ts";
 import {
   buildCallTask,
   createSourcingCallPlan,
@@ -41,6 +42,13 @@ test("validates global sourcing inputs and E.164 suppliers", () => {
   );
   assert.throws(() => parseSourcingRequest({ ...request, countryCode: "NZ", locale: "en-NZ" }), /not currently supported/);
   assert.throws(() => parseSourcingRequest({ ...request, locale: "sw-KE" }), /not a supported CALL-E language/);
+});
+
+test("exposes live calling only when every trusted runtime binding is present", () => {
+  assert.deepEqual(calculateCalleCapabilities({}), { fixtureAvailable: true, liveAvailable: false });
+  assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key" }).liveAvailable, false);
+  assert.equal(calculateCalleCapabilities({ CALLE_MODE: "fixture", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, false);
+  assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, true);
 });
 
 test("defines a valid localized configuration for every supported CALL-E market", () => {

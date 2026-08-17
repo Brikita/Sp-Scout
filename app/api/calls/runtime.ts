@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { calculateCalleCapabilities } from "../../../lib/calle/capabilities";
 import type { CalleRuntimeConfig } from "../../../lib/calle/server";
 
 type RuntimeBindings = {
@@ -24,11 +25,7 @@ export function getCalleRuntimeConfig(): CalleRuntimeConfig {
 }
 
 export function getCalleCapabilities() {
-  const runtime = bindings();
-  return {
-    fixtureAvailable: true,
-    liveAvailable: runtime.CALLE_MODE === "live" && Boolean(runtime.CALLE_API_KEY && runtime.SPARESCOUT_APPROVAL_SECRET),
-  };
+  return calculateCalleCapabilities(bindings());
 }
 
 export function getApprovalSecret(mode: "fixture" | "live"): string {
