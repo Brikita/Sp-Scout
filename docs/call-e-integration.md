@@ -38,6 +38,8 @@ No external call starts in this step.
 
 Fixture plans always use the local fixture adapter, even if the server later switches to live mode. Live plans require `CALLE_MODE=live`, `CALLE_API_KEY`, and a production approval secret.
 
+The browser reads `GET /api/calls/capabilities` before enabling its live-pilot selector. That endpoint requires all three trusted live bindings; partial configuration remains fixture-only. This presentation gate supplements the server-side execution checks rather than replacing them.
+
 The CALL-E idempotency key is derived from the approval fingerprint. Retrying the same authorized plan therefore targets the same provider task instead of creating another batch.
 
 ### 6. Monitor without dialing again

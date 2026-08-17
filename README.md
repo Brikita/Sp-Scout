@@ -37,6 +37,7 @@ flowchart LR
 - Signed, 15-minute approval tokens bound to the complete plan.
 - Provider idempotency derived from the approved plan.
 - Safe fixture execution that cannot become live through a configuration change.
+- A live-pilot selector that stays disabled until the trusted server confirms mode, API key, and approval secret are all configured.
 - Durable D1 requests, suppliers, approvals, call runs, quotes, and evidence.
 - Read-only live status polling that cannot start another call.
 - Masked supplier numbers in plans and history responses.
@@ -85,6 +86,7 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 
 | Route | Method | Side effect |
 | --- | --- | --- |
+| `/api/calls/capabilities` | `GET` | Reports fixture/live availability; never starts a call. |
 | `/api/calls/plan` | `POST` | Saves a plan; never starts a call. |
 | `/api/calls/execute` | `POST` | Starts only the explicitly approved plan. |
 | `/api/calls/status/:requestId/:callId` | `GET` | Retrieves an existing live run; cannot create one. |
