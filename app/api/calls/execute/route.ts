@@ -1,5 +1,6 @@
 import { verifyApproval } from "../../../../lib/calle/approval";
 import { executeSourcingPlan } from "../../../../lib/calle/server";
+import { saveCallApproval, saveCallExecution } from "../../../../db/sourcing";
 import { getApprovalSecret, getCalleRuntimeConfig } from "../runtime";
 
 export async function POST(request: Request) {
@@ -14,8 +15,13 @@ export async function POST(request: Request) {
 
     const config = getCalleRuntimeConfig();
     const plan = await verifyApproval(body.approvalToken, getApprovalSecret(config.mode));
+    await saveCallApproval(plan, body.approvalToken);
     const execution = await executeSourcingPlan(plan, body.approvalToken, config);
-    return Response.json({ execution }, { status: 202 });
+    await saveCallExecution(plan, body.approvalToken, execution);
+    return Response.json(
+      { execution, requestId: plan.id, historyUrl: `/api/sourcing/requests/${plan.id}` },
+      { status: 202 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start the supplier calls.";
     return Response.json({ error: message }, { status: 400 });
