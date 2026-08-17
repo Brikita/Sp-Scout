@@ -1,30 +1,56 @@
 # SpareScout
 
-SpareScout is a phone-powered sourcing workspace for vehicle parts. A buyer enters the vehicle and part details once; SpareScout calls several dealers, verifies fitment, captures price and availability, and presents comparable offers with evidence.
+SpareScout is a phone-powered sourcing application for vehicle parts. A buyer describes the exact vehicle, fitment reference, part, budget, location, and deadline once. SpareScout prepares a reviewable plan, uses CALL-E to gather quotes from several suppliers, and turns the conversations into comparable, evidence-backed results.
 
-The current version is a complete dry-run prototype. It demonstrates the request, approval, supplier outreach, comparison, and reservation-preview flow without placing calls or making commitments.
+The application defaults to a no-call fixture workflow. The trusted backend also implements the real CALL-E TypeScript SDK path, but a live run still requires a live plan, server credentials, and explicit approval of that exact plan.
 
-## Why this exists
+## Why this problem needs phone calls
 
-Parts inventory is often fragmented across phone-first sellers. Finding the correct item means repeating vehicle details, checking compatibility, comparing prices, and coordinating delivery across several calls. SpareScout turns that work into one supervised workflow.
+Independent parts dealers often have useful inventory that is missing or stale online. Compatibility can depend on chassis or VIN, OEM reference, model year, trim, position, brand, and condition. Buyers repeat these details across several calls and still risk comparing incompatible offers.
 
-## Product principles
+SpareScout makes that phone work inspectable:
 
-- Fitment before price: a cheaper incompatible part is not an offer.
-- Evidence over summaries: every structured field should trace back to the call.
-- Human approval at side effects: calls and reservation attempts are separate approval gates.
-- No purchasing authority: the agent may never commit funds or place an order.
-- Honest uncertainty: incomplete compatibility checks remain visibly incomplete.
+- fitment evidence is shown before price ranking;
+- unknown information stays unknown;
+- every outbound batch has a separate approval gate;
+- call retries use a stable idempotency key;
+- results, failures, and confidence are stored together; and
+- payment, purchase, order, and reservation authority are excluded.
 
-## Current flow
+## Product flow
 
-1. Enter the vehicle, chassis, part, budget, location, and timing.
-2. Review the exact supplier call plan and masked recipients.
-3. Approve a dry run across three example dealers.
-4. Compare normalized offers, confidence, and call evidence.
-5. Select an offer and preview the separate reservation step.
+```mermaid
+flowchart LR
+  A["Localized part request"] --> B["Signed call-plan preview"]
+  B --> C["Explicit approval"]
+  C --> D["CALL-E supplier batch"]
+  D --> E["Durable status monitoring"]
+  E --> F["Structured quote comparison"]
+  F --> G["Separate reservation preview"]
+```
 
-## Local development
+## Implemented capabilities
+
+- Official `@call-e/calle` server SDK integration.
+- Strict aggregate and per-supplier JSON result schemas.
+- AI identity disclosure and information-only call instructions.
+- Signed, 15-minute approval tokens bound to the complete plan.
+- Provider idempotency derived from the approved plan.
+- Safe fixture execution that cannot become live through a configuration change.
+- Durable D1 requests, suppliers, approvals, call runs, quotes, and evidence.
+- Read-only live status polling that cannot start another call.
+- Masked supplier numbers in plans and history responses.
+- Seventeen current CALL-E recipient regions with market-specific language, currency, delivery, budget, and fixture configuration.
+- About, workflow, markets, safety, privacy, and pilot-evidence pages.
+- Pilot metrics calculated only from durable live records, with all fixture runs excluded.
+
+## Supported markets
+
+SpareScout exposes the current CALL-E recipient regions: United States, Singapore, Malaysia, India, United Arab Emirates, Australia, Canada, United Kingdom, Vietnam, Germany, Japan, France, Mexico, Brazil, Indonesia, Philippines, and Kenya.
+
+The interface only offers the spoken languages documented for the selected region. See [`lib/markets.ts`](lib/markets.ts) for the versioned matrix and `/markets` in the application for the user-facing list.
+
+## Run locally
 
 Requirements: Node.js 22.13 or newer.
 
@@ -33,45 +59,49 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. Fixture mode is the default and does not dial a number.
+
+Run all checks:
 
 ```bash
-npm run build
-npm test
-npm run lint
+npm run check
 ```
 
-## CALL-E integration boundary
+## Trusted server configuration
 
-CALL-E is authenticated in the development environment and exposes `plan_call`, `run_call`, and `get_call_run`. The prototype intentionally does not invoke those tools yet.
+Copy `.env.example` into the trusted runtime configuration. Never expose these values to browser code.
 
-The production path will replace the timed dry-run activity with a server-side adapter that:
+| Variable | Purpose |
+| --- | --- |
+| `CALLE_MODE` | `fixture` by default; only `live` enables the live adapter. |
+| `CALLE_API_KEY` | CALL-E server API credential required for live execution and polling. |
+| `CALLE_BASE_URL` | Optional CALL-E API base URL override. |
+| `CALLE_WEBHOOK_URL` | Optional terminal webhook destination passed to CALL-E. |
+| `SPARESCOUT_APPROVAL_SECRET` | HMAC secret for signed live approval tokens. |
 
-- creates one call plan for the selected suppliers;
-- requires a fresh user approval before execution;
-- stores only opaque plan and run identifiers;
-- polls or receives run completion updates;
-- validates extracted quote fields before display; and
-- refuses payment, purchase, and reservation instructions during sourcing calls.
+`CALLE_MODE=live` is not sufficient by itself. A request must also have been planned as `executionMode: "live"`, carry a valid unexpired signature, and be submitted with `approved: true`.
 
-See [docs/call-e-integration.md](docs/call-e-integration.md) for the implementation contract.
+## Key routes
 
-## Stack
+| Route | Method | Side effect |
+| --- | --- | --- |
+| `/api/calls/plan` | `POST` | Saves a plan; never starts a call. |
+| `/api/calls/execute` | `POST` | Starts only the explicitly approved plan. |
+| `/api/calls/status/:requestId/:callId` | `GET` | Retrieves an existing live run; cannot create one. |
+| `/api/sourcing/requests/:id` | `GET` | Returns masked durable request history. |
+| `/api/pilot/metrics` | `GET` | Aggregates live pilot evidence and excludes fixtures. |
 
-- React 19 and TypeScript
-- vinext and Vite
-- Cloudflare Workers-compatible runtime
-- CALL-E for phone call planning and execution
+## Data and safety boundary
 
-## Status
+- Full supplier numbers stay server-side and are only used for an approved execution.
+- Browser-visible plans and history use masked numbers.
+- CALL-E summaries, transcripts, and structured values are treated as untrusted external data.
+- The sourcing task cannot accept substitute parts or agree to commercial terms.
+- Selecting an offer does not contact a supplier; it only opens a separate reservation preview.
+- The public pilot page makes no performance claim until consenting live records exist.
 
-- [x] Guided sourcing request
-- [x] Call-plan approval gate
-- [x] Realistic batch-call dry run
-- [x] Structured quote comparison
-- [x] Evidence and confidence treatment
-- [x] Reservation approval preview
-- [ ] Server-side CALL-E adapter
-- [ ] Webhook-backed run updates
-- [ ] Supplier and sourcing-request persistence
-- [ ] Consenting pilot with Nairobi parts dealers
+See [`docs/call-e-integration.md`](docs/call-e-integration.md) for the implementation contract and [`submission/`](submission/) for the judge walkthrough, video script, and submission drafts.
+
+## Current evidence status
+
+The fixture workflow, official SDK request shape, approval verification, idempotency, status polling, supported markets, rendered routes, and pilot calculations are automated and passing. A consenting real-supplier pilot has not yet been run, so the evidence board intentionally shows no live performance values.

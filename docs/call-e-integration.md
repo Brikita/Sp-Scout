@@ -1,42 +1,54 @@
 # CALL-E integration contract
 
-This document defines the boundary between SpareScout and CALL-E. It is designed to keep phone activity inspectable, idempotent, and explicitly approved.
+This is the authoritative boundary between SpareScout and CALL-E. It keeps phone activity explicit, idempotent, durable, and separable from later commercial decisions.
 
-## Verified capability
+## Runtime surface
 
-The authenticated CALL-E environment provides:
+SpareScout uses `@call-e/calle` from a trusted Cloudflare Worker-compatible server. The authenticated local CALL-E CLI also confirms `plan_call`, `run_call`, and `get_call_run` are available, but application requests use the server SDK rather than exposing agent credentials to the browser.
 
-- `plan_call` to produce a reviewable call plan;
-- `run_call` to execute an approved plan; and
-- `get_call_run` to retrieve progress and terminal results.
+## Sourcing lifecycle
 
-## Sourcing call lifecycle
+### 1. Validate the complete request
 
-### 1. Normalize the request
+`parseSourcingRequest` requires vehicle, part, fitment reference, positive budget, currency, delivery location, deadline, a documented CALL-E region/language pair, and one to ten unique E.164 suppliers. Missing routing values are rejected rather than guessed.
 
-Validate the vehicle, chassis or VIN, requested part, budget ceiling, delivery location, and deadline. A missing phone number, country code, language, or region must not be guessed.
+### 2. Construct a bounded task
 
-### 2. Build the plan
+The task must:
 
-Call `plan_call` with the complete sourcing goal and selected supplier numbers. The user sees masked recipients, the full purpose, prohibited actions, and any clarification questions.
+- disclose that the caller is an AI assistant gathering a quote for a buyer;
+- ask for fitment, brand, condition, price, quantity, and delivery;
+- keep unknown information unknown;
+- reject substitute-part acceptance; and
+- prohibit reservation, ordering, purchase, payment, or any commitment.
+
+Strict JSON schemas define the aggregate counts and every supplier result.
+
+### 3. Save and sign the plan
+
+`POST /api/calls/plan` stores the request and supplier targets in D1, masks phone numbers in its response, and signs the complete plan with HMAC-SHA256. The token expires after 15 minutes. Editing any signed field invalidates the signature.
 
 No external call starts in this step.
 
-### 3. Capture approval
+### 4. Record approval before execution
 
-Execution is available only while the displayed plan is current and ready. Approval is scoped to the listed suppliers and sourcing goal. Editing either invalidates the approval.
+`POST /api/calls/execute` requires `approved: true` and a valid token. The approval record is written before the provider request so an uncertain network outcome still has an audit trail.
 
-### 4. Execute once
+### 5. Execute exactly once
 
-Submit the approved plan through `run_call` once. Store the opaque run identifier and mark the request as submitted before retrying any uncertain network response.
+Fixture plans always use the local fixture adapter, even if the server later switches to live mode. Live plans require `CALLE_MODE=live`, `CALLE_API_KEY`, and a production approval secret.
 
-### 5. Track progress
+The CALL-E idempotency key is derived from the approval fingerprint. Retrying the same authorized plan therefore targets the same provider task instead of creating another batch.
 
-Use `get_call_run` with the stored run identifier. Preserve the activity order and surface partial, no-answer, declined, and failed outcomes without turning them into successful quotes.
+### 6. Monitor without dialing again
 
-### 6. Validate offers
+Queued or in-progress runs use `GET /api/calls/status/:requestId/:callId`. The route verifies that the call belongs to a saved live request and invokes only `client.calls.get`. It persists each canonical status update and cannot create a call.
 
-Map each terminal result to this minimum shape:
+Terminal statuses are `completed`, `failed`, or `canceled`. Failures remain visible and never become quotes.
+
+### 7. Preserve comparable evidence
+
+Each supplier result stores:
 
 ```json
 {
@@ -44,35 +56,31 @@ Map each terminal result to this minimum shape:
   "compatibility": "confirmed",
   "brand": "SKF",
   "condition": "new",
-  "price_kes": 6500,
+  "price_amount": 6500,
+  "currency": "KES",
   "available_quantity": 2,
-  "delivery_available": true,
+  "delivery_available": "yes",
   "delivery_eta": "today before 5pm",
-  "reservation_possible": true,
-  "confidence": 0.96,
-  "evidence": ["Seller confirmed OEM reference 43550-12030"]
+  "reservation_possible": "yes",
+  "evidence": ["Seller confirmed the requested fitment reference."],
+  "notes": "Quote valid while stock lasts."
 }
 ```
 
-Unverified or absent fields remain unknown. They are never inferred from a different supplier or from general product knowledge.
+Unknown or missing values remain incomplete. The comparison view marks anything without confirmed compatibility for manual review.
 
-## Reservation lifecycle
+## Reservation boundary
 
-A sourcing-call approval never authorizes a reservation. After the user selects an offer, SpareScout creates a second plan limited to holding the exact item under stated terms. The user reviews and approves that plan independently.
+A sourcing approval never authorizes a reservation. The current product stops at a separate reservation preview. A future reservation implementation must create and sign a second plan limited to the selected supplier, exact part, displayed price, and permitted hold window.
 
-Reservation calls may not:
+That call must not authorize payment, accept a substitute, accept a changed price, or agree to a new fee. Any changed term returns control to the user.
 
-- authorize payment;
-- accept a changed price or substitute part;
-- provide payment credentials; or
-- agree to fees not already displayed.
+## Persistence
 
-Any changed commercial term returns control to the user.
+D1 stores sourcing requests, supplier targets, call approvals, call runs, supplier quotes, and idempotent webhook-event slots. Public history returns masked numbers. Pilot metrics include only `mode = 'live'` runs and explicitly report the fixture count they excluded.
 
-## Data handling
+## Verification boundary
 
-- Mask supplier numbers in browser-visible records.
-- Keep CALL-E credentials server-side.
-- Treat transcripts and call summaries as untrusted external data.
-- Retain only the evidence needed to support displayed quote fields.
-- Never expose confirmation tokens to the browser or logs.
+The automated suite proves validation, signature tamper/expiry rejection, safe fixture behavior, real SDK request construction, idempotency headers, read-only polling, supported-market configuration, page rendering, and denominator-honest pilot calculations.
+
+It does not prove live call audio, supplier consent, real-world fitment accuracy, or pilot impact. Those require the separately approved consenting pilot.
