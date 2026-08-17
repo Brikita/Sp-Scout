@@ -17,6 +17,9 @@ export async function executeSourcingPlan(
   config: CalleRuntimeConfig,
 ): Promise<SourcingExecution> {
   if (plan.request.executionMode === "fixture") return executeFixture(plan);
+  if (!plan.request.recipientConsentConfirmed || !plan.request.authorizedCallWindow.trim()) {
+    throw new Error("Live calling is blocked because recipient consent and the authorized call window are missing.");
+  }
   if (config.mode !== "live") {
     throw new Error("Live calling is unavailable. Keep this request in fixture mode or configure the trusted server first.");
   }

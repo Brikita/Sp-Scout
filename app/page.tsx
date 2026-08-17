@@ -142,6 +142,8 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionMode, setExecutionMode] = useState<"fixture" | "live">("fixture");
+  const [recipientConsentConfirmed, setRecipientConsentConfirmed] = useState(false);
+  const [authorizedCallWindow, setAuthorizedCallWindow] = useState("");
   const [liveAvailable, setLiveAvailable] = useState(false);
   const [liveSuppliers, setLiveSuppliers] = useState<SupplierDraft[]>([
     { id: "live-supplier-1", name: "", area: "", phone: "" },
@@ -218,6 +220,8 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           executionMode,
+          recipientConsentConfirmed: executionMode === "live" && recipientConsentConfirmed,
+          authorizedCallWindow: executionMode === "live" ? authorizedCallWindow : "No live call — fixture",
           vehicle: form.vehicle,
           part: form.part,
           fitmentReference: form.chassis,
@@ -444,6 +448,28 @@ export default function Home() {
                       <label><span>E.164 phone</span><input type="tel" value={supplier.phone} onChange={(event) => updateLiveSupplier(index, "phone", event.target.value)} placeholder="+15551234567" pattern="\+[1-9][0-9]{7,14}" required /></label>
                     </div>
                   ))}
+                  <div className="consent-panel">
+                    <label className="field">
+                      <span>Authorized calling window</span>
+                      <input
+                        value={authorizedCallWindow}
+                        onChange={(event) => setAuthorizedCallWindow(event.target.value)}
+                        placeholder="17 Aug, 3:00–4:00 PM EAT"
+                        maxLength={120}
+                        required
+                      />
+                      <small>Calls start immediately after final plan approval. Include the date, time, and time zone.</small>
+                    </label>
+                    <label className="consent-check">
+                      <input
+                        type="checkbox"
+                        checked={recipientConsentConfirmed}
+                        onChange={(event) => setRecipientConsentConfirmed(event.target.checked)}
+                        required
+                      />
+                      <span><strong>Direct consent confirmed</strong>Each listed business agreed to receive this AI-assisted sourcing call during the window above.</span>
+                    </label>
+                  </div>
                 </fieldset>
               )}
             </div>
@@ -486,6 +512,12 @@ export default function Home() {
               <div className="call-targets">
                 {activeSuppliers.map((supplier) => <div key={supplier.id}><span className="supplier-index">{supplier.name.charAt(0)}</span><span><strong>{supplier.name}</strong><small>{supplier.phone}</small></span><b>Ready</b></div>)}
               </div>
+              {executionMode === "live" && (
+                <div className="consent-review">
+                  <span aria-hidden="true">✓</span>
+                  <p><strong>Recipient consent attested</strong>Authorized window: {authorizedCallWindow}</p>
+                </div>
+              )}
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>
               <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>{executionMode === "live" ? "Approve 3 supplier calls" : "Approve 3 demo calls"} <span>→</span></button>
               {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}

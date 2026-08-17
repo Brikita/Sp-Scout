@@ -16,6 +16,7 @@ export default function PrivacyPage() {
       <section className="privacy-list">
         <article><h2>Request data</h2><p>Vehicle and part details, fitment reference, budget, location, deadline, market, language, and supplier business contacts are used to create the reviewed call plan.</p></article>
         <article><h2>Call records</h2><p>Approval timestamps, provider call identifiers, status, summaries, confidence, evidence, and structured supplier quotes are retained for audit and comparison.</p></article>
+        <article><h2>Consent record</h2><p>Live plans store the operator’s consent attestation and authorized calling window with the request. SpareScout does not infer consent from possession of a phone number.</p></article>
         <article><h2>Protected display</h2><p>Full supplier numbers are needed by the trusted server to place an approved call. User-facing plans and history mask those numbers.</p></article>
         <article><h2>History access</h2><p>Each request receives a separate random history credential remembered by the originating browser. The server stores only its cryptographic hash and refuses history reads without the credential.</p></article>
         <article><h2>What is excluded</h2><p>SpareScout does not ask for payment cards, banking credentials, or authority to purchase. Do not enter unrelated personal or sensitive information.</p></article>

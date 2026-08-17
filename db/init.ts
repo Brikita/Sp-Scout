@@ -17,6 +17,8 @@ async function initialize(db: D1Binding): Promise<void> {
       needed_by TEXT NOT NULL,
       country_code TEXT NOT NULL,
       locale TEXT NOT NULL,
+      recipient_consent_confirmed INTEGER NOT NULL DEFAULT 0,
+      authorized_call_window TEXT NOT NULL DEFAULT 'No live call — fixture',
       history_access_hash TEXT,
       created_at TEXT NOT NULL,
       expires_at TEXT NOT NULL,
@@ -94,6 +96,12 @@ async function initialize(db: D1Binding): Promise<void> {
     .all<{ name: string }>();
   if (!requestColumns.some((column) => column.name === "history_access_hash")) {
     await db.batch([db.prepare("ALTER TABLE sourcing_requests ADD COLUMN history_access_hash TEXT")]);
+  }
+  if (!requestColumns.some((column) => column.name === "recipient_consent_confirmed")) {
+    await db.batch([db.prepare("ALTER TABLE sourcing_requests ADD COLUMN recipient_consent_confirmed INTEGER NOT NULL DEFAULT 0")]);
+  }
+  if (!requestColumns.some((column) => column.name === "authorized_call_window")) {
+    await db.batch([db.prepare("ALTER TABLE sourcing_requests ADD COLUMN authorized_call_window TEXT NOT NULL DEFAULT 'No live call — fixture'")]);
   }
   await db.batch([db.prepare("PRAGMA optimize")]);
 }

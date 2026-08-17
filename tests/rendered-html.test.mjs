@@ -34,7 +34,7 @@ test("server-renders every public product page with shared navigation", async ()
     ["/how-it-works", /From repeated calls/],
     ["/markets", /Global-ready means precise/],
     ["/safety", /real-world side effect/],
-    ["/privacy", /Collect what the sourcing decision needs/],
+    ["/privacy", /does not infer consent/],
     ["/pilot", /Every attempt stays visible/],
     ["/history", /Your sourcing ledger/],
   ];

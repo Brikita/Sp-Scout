@@ -10,6 +10,8 @@ export type SourcingSupplier = {
 
 export type SourcingRequest = {
   executionMode: "fixture" | "live";
+  recipientConsentConfirmed: boolean;
+  authorizedCallWindow: string;
   vehicle: string;
   part: string;
   fitmentReference: string;
@@ -83,6 +85,14 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
   if (input.executionMode !== "fixture" && input.executionMode !== "live") {
     throw new Error("executionMode must be fixture or live.");
   }
+  const isLive = input.executionMode === "live";
+  const recipientConsentConfirmed = input.recipientConsentConfirmed === true;
+  if (isLive && !recipientConsentConfirmed) {
+    throw new Error("Confirm that every listed business directly consented to this live pilot call.");
+  }
+  const authorizedCallWindow = isLive
+    ? requiredText(input.authorizedCallWindow, "authorizedCallWindow", 120)
+    : "No live call — fixture";
   const budgetAmount = Number(input.budgetAmount);
   if (!Number.isFinite(budgetAmount) || budgetAmount <= 0) {
     throw new Error("budgetAmount must be greater than zero.");
@@ -143,6 +153,8 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
 
   return {
     executionMode: input.executionMode,
+    recipientConsentConfirmed: isLive && recipientConsentConfirmed,
+    authorizedCallWindow,
     vehicle: requiredText(input.vehicle, "vehicle"),
     part: requiredText(input.part, "part"),
     fitmentReference: requiredText(input.fitmentReference, "fitmentReference"),
@@ -157,7 +169,7 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
 }
 
 export function buildCallTask(request: SourcingRequest): string {
-  return [
+  const instructions = [
     "You are SpareScout, an AI calling assistant sourcing a vehicle part on the buyer's behalf.",
     "At the start of each conversation, clearly disclose that you are an AI assistant calling for a buyer to collect a quote.",
     `Ask whether a ${request.part} fits a ${request.vehicle} using fitment reference ${request.fitmentReference}.`,
@@ -165,7 +177,14 @@ export function buildCallTask(request: SourcingRequest): string {
     `The buyer's budget ceiling is ${request.currency} ${request.budgetAmount}. Do not negotiate beyond gathering the quoted terms.`,
     "Ask whether the item could be held after a separate confirmation, but do not reserve, order, purchase, pay for, or commit to anything.",
     "Do not accept a substitute part. Record unknown information as unknown instead of inferring it.",
-  ].join(" ");
+  ];
+  if (request.executionMode === "live") {
+    instructions.push(
+      `The operator attested that every listed business directly consented to this AI-assisted pilot call for the authorized window: ${request.authorizedCallWindow}.`,
+      "If the recipient withdraws consent, asks not to be called, or says this is not an appropriate time, apologize, end the conversation promptly, and record the outcome without continuing the sourcing questions.",
+    );
+  }
+  return instructions.join(" ");
 }
 
 export function buildAggregateResultSchema(): JsonObject {

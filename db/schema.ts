@@ -15,6 +15,8 @@ export const sourcingRequests = sqliteTable(
     neededBy: text("needed_by").notNull(),
     countryCode: text("country_code").notNull(),
     locale: text("locale").notNull(),
+    recipientConsentConfirmed: integer("recipient_consent_confirmed", { mode: "boolean" }).notNull().default(false),
+    authorizedCallWindow: text("authorized_call_window").notNull().default("No live call — fixture"),
     historyAccessHash: text("history_access_hash"),
     createdAt: text("created_at").notNull(),
     expiresAt: text("expires_at").notNull(),

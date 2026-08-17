@@ -35,6 +35,8 @@ type HistoryRequest = {
   id: string;
   status: string;
   executionMode: string;
+  recipientConsentConfirmed: boolean;
+  authorizedCallWindow: string;
   vehicle: string;
   part: string;
   fitmentReference: string;
@@ -194,6 +196,9 @@ export function HistoryLedger() {
               <span key={supplier.id}><strong>{supplier.name}</strong>{supplier.area ?? "Area not supplied"} · {supplier.phone}</span>
             ))}
           </div>
+          {item.request.executionMode === "live" && (
+            <p className="history-consent"><strong>Consent attested</strong>Authorized calling window: {item.request.authorizedCallWindow}</p>
+          )}
           {item.notice && <p className="history-notice" role="status">{item.notice} The last durable status is shown below.</p>}
           {item.deleteError && <p className="history-notice" role="alert">{item.deleteError}</p>}
           {!item.request.runs.length ? (

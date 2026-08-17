@@ -17,6 +17,8 @@ import { SUPPORTED_MARKETS, supportsMarketLocale } from "../lib/markets.ts";
 
 const request: SourcingRequest = {
   executionMode: "fixture",
+  recipientConsentConfirmed: false,
+  authorizedCallWindow: "No live call — fixture",
   vehicle: "2014 Toyota Fielder",
   part: "front-left wheel bearing",
   fitmentReference: "NKE165-705K9",
@@ -44,6 +46,14 @@ test("validates global sourcing inputs and E.164 suppliers", () => {
   );
   assert.throws(() => parseSourcingRequest({ ...request, countryCode: "NZ", locale: "en-NZ" }), /not currently supported/);
   assert.throws(() => parseSourcingRequest({ ...request, locale: "sw-KE" }), /not a supported CALL-E language/);
+  assert.throws(
+    () => parseSourcingRequest({ ...request, executionMode: "live", authorizedCallWindow: "17 Aug, 3–4 PM EAT" }),
+    /directly consented/i,
+  );
+  assert.throws(
+    () => parseSourcingRequest({ ...request, executionMode: "live", recipientConsentConfirmed: true, authorizedCallWindow: "" }),
+    /authorizedCallWindow is required/,
+  );
 });
 
 test("exposes live calling only when every trusted runtime binding is present", () => {
@@ -104,6 +114,36 @@ test("builds a disclosed, information-only call task", () => {
   assert.match(task, /KES 8000/);
 });
 
+test("binds live calls to a direct-consent attestation and authorized window", () => {
+  const liveRequest: SourcingRequest = {
+    ...request,
+    executionMode: "live",
+    recipientConsentConfirmed: true,
+    authorizedCallWindow: "17 August 2026, 3:00–4:00 PM EAT",
+  };
+  const task = buildCallTask(liveRequest);
+  assert.match(task, /directly consented/i);
+  assert.match(task, /17 August 2026, 3:00–4:00 PM EAT/);
+  assert.match(task, /withdraws consent/i);
+});
+
+test("blocks a live SDK request when the signed plan lacks consent evidence", async () => {
+  let providerRequested = false;
+  const unconsentedPlan = createSourcingCallPlan({ ...request, executionMode: "live" });
+  await assert.rejects(
+    () => executeSourcingPlan(unconsentedPlan, "approved-plan-token", {
+      mode: "live",
+      apiKey: "calle_test_key",
+      fetch: async () => {
+        providerRequested = true;
+        throw new Error("Provider request should not occur.");
+      },
+    }),
+    /recipient consent and the authorized call window are missing/i,
+  );
+  assert.equal(providerRequested, false);
+});
+
 test("requires an untampered, unexpired approval", async () => {
   const now = new Date("2026-08-17T08:00:00.000Z");
   const plan = createSourcingCallPlan(request, now);
@@ -137,7 +177,12 @@ test("recognizes every terminal CALL-E state", () => {
 
 test("uses the official SDK with schemas and an idempotency key in live mode", async () => {
   let outbound: Request | undefined;
-  const livePlan = createSourcingCallPlan({ ...request, executionMode: "live" });
+  const livePlan = createSourcingCallPlan({
+    ...request,
+    executionMode: "live",
+    recipientConsentConfirmed: true,
+    authorizedCallWindow: "17 August 2026, 3:00–4:00 PM EAT",
+  });
   const execution = await executeSourcingPlan(livePlan, "approved-plan-token", {
     mode: "live",
     apiKey: "calle_test_key",

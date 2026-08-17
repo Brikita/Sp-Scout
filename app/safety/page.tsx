@@ -7,6 +7,7 @@ export const metadata: Metadata = {
 };
 
 const controls = [
+  ["Direct consent", "A live plan is rejected unless the operator attests that every listed business consented and records the authorized calling window."],
   ["Explicit approval", "A reviewed plan must carry a valid, untampered approval token before execution."],
   ["AI disclosure", "The call task instructs SpareScout to identify itself as an AI assistant collecting a quote for a buyer."],
   ["Information only", "Calls may ask about price, stock, fitment, delivery, and whether a later hold is possible. They cannot reserve, order, pay, purchase, or commit."],

@@ -65,9 +65,10 @@ export async function savePlannedRequest(
     db.prepare(
       `INSERT INTO sourcing_requests (
         id, status, execution_mode, vehicle, part, fitment_reference, budget_amount,
-        currency, delivery_location, needed_by, country_code, locale, history_access_hash,
+        currency, delivery_location, needed_by, country_code, locale,
+        recipient_consent_confirmed, authorized_call_window, history_access_hash,
         created_at, expires_at, updated_at
-      ) VALUES (?, 'awaiting_approval', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, 'awaiting_approval', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO NOTHING`,
     ).bind(
       plan.id,
@@ -81,6 +82,8 @@ export async function savePlannedRequest(
       request.neededBy,
       request.countryCode,
       request.locale,
+      Number(request.recipientConsentConfirmed),
+      request.authorizedCallWindow,
       historyAccessHash,
       plan.createdAt,
       plan.expiresAt,
@@ -243,6 +246,8 @@ type RequestRow = {
   needed_by: string;
   country_code: string;
   locale: string;
+  recipient_consent_confirmed: number;
+  authorized_call_window: string;
   created_at: string;
   updated_at: string;
 };
@@ -307,7 +312,8 @@ export async function getSourcingRequestHistory(
   await purgeExpiredSourcingData(db);
   const request = await db.prepare(
     `SELECT id, status, execution_mode, vehicle, part, fitment_reference, budget_amount,
-      currency, delivery_location, needed_by, country_code, locale, created_at, updated_at
+      currency, delivery_location, needed_by, country_code, locale,
+      recipient_consent_confirmed, authorized_call_window, created_at, updated_at
      FROM sourcing_requests WHERE id = ? AND history_access_hash = ?`,
   ).bind(requestId, historyAccessHash).first<RequestRow>();
   if (!request) return null;
@@ -342,6 +348,8 @@ export async function getSourcingRequestHistory(
     neededBy: request.needed_by,
     countryCode: request.country_code,
     locale: request.locale,
+    recipientConsentConfirmed: Boolean(request.recipient_consent_confirmed),
+    authorizedCallWindow: request.authorized_call_window,
     createdAt: request.created_at,
     updatedAt: request.updated_at,
     suppliers: suppliers.map((supplier) => ({
