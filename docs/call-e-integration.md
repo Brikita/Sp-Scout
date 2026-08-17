@@ -79,7 +79,7 @@ That call must not authorize payment, accept a substitute, accept a changed pric
 
 ## Persistence
 
-D1 stores sourcing requests, supplier targets, call approvals, call runs, supplier quotes, and idempotent webhook-event slots. Public history returns masked numbers. Pilot metrics include only `mode = 'live'` runs and explicitly report the fixture count they excluded.
+D1 stores sourcing requests, supplier targets, call approvals, call runs, supplier quotes, and idempotent webhook-event slots. History returns masked numbers and requires a random, request-specific bearer credential; D1 stores only its SHA-256 hash. The originating browser remembers that credential locally so it can reopen the authoritative server record. Pilot metrics include only `mode = 'live'` runs and explicitly report the fixture count they excluded.
 
 ## Verification boundary
 

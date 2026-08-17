@@ -12,6 +12,7 @@
 8. Compare the normalized quotes and expand the evidence attached to each result.
 9. Select an offer and open the reservation preview. Confirm that this does not contact the supplier.
 10. Visit **Pilot evidence** and confirm that fixture records are excluded from the displayed live metrics.
+11. Visit **Request history** and reopen the completed request from the private ledger. Confirm that supplier numbers remain masked and call evidence is preserved.
 
 ## What the safe demo proves
 

@@ -26,6 +26,8 @@ If no real pilot has been authorized yet, record the fixture flow and label it p
 
 Reveal the offer cards. Compare compatibility, brand, condition, price, stock, delivery, confidence, and evidence. Open the incomplete result and explain why it is not ranked as verified.
 
+Open **Request history**. Show that the completed workflow is a durable audit record rather than a transient animation, while the supplier numbers remain masked and the history endpoint requires its separate browser-held credential.
+
 ## 1:58–2:18 — Separate decision
 
 Select one offer and open the reservation preview. Explain that sourcing approval did not grant purchasing authority and no reservation call has started.
