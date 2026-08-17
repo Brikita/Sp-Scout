@@ -10,6 +10,7 @@ import {
 } from "../lib/calle/contracts.ts";
 import { executeFixture } from "../lib/calle/fixtures.ts";
 import { executeSourcingPlan, getSourcingExecution } from "../lib/calle/server.ts";
+import { SUPPORTED_MARKETS, supportsMarketLocale } from "../lib/markets.ts";
 
 const request: SourcingRequest = {
   executionMode: "fixture",
@@ -38,6 +39,19 @@ test("validates global sourcing inputs and E.164 suppliers", () => {
     () => parseSourcingRequest({ ...request, suppliers: [request.suppliers[0], request.suppliers[0]] }),
     /unique/,
   );
+  assert.throws(() => parseSourcingRequest({ ...request, countryCode: "NZ", locale: "en-NZ" }), /not currently supported/);
+  assert.throws(() => parseSourcingRequest({ ...request, locale: "sw-KE" }), /not a supported CALL-E language/);
+});
+
+test("defines a valid localized configuration for every supported CALL-E market", () => {
+  assert.equal(SUPPORTED_MARKETS.length, 17);
+  for (const market of SUPPORTED_MARKETS) {
+    assert.match(market.countryCode, /^[A-Z]{2}$/);
+    assert.match(market.currency, /^[A-Z]{3}$/);
+    assert.equal(supportsMarketLocale(market.countryCode, market.defaultLocale), true);
+    assert.equal(market.fixturePhones.length, 3);
+    for (const phone of market.fixturePhones) assert.match(phone, /^\+[1-9]\d{7,14}$/);
+  }
 });
 
 test("builds a disclosed, information-only call task", () => {

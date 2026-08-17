@@ -1,4 +1,5 @@
 import type { Call, CallStatus, JsonObject } from "@call-e/calle";
+import { getSupportedMarket, supportsMarketLocale } from "../markets.ts";
 
 export type SourcingSupplier = {
   id: string;
@@ -100,6 +101,13 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
   const locale = requiredText(input.locale, "locale", 12);
   if (!LOCALE_PATTERN.test(locale)) {
     throw new Error("locale must look like en or en-KE.");
+  }
+  const market = getSupportedMarket(countryCode);
+  if (!market) {
+    throw new Error(`${countryCode} is not currently supported for CALL-E calling.`);
+  }
+  if (!supportsMarketLocale(countryCode, locale)) {
+    throw new Error(`${locale} is not a supported CALL-E language for ${market.countryName}.`);
   }
 
   if (!Array.isArray(input.suppliers) || input.suppliers.length < 1 || input.suppliers.length > 10) {
