@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { isTerminalExecution, type SourcingExecution } from "../lib/calle/contracts.ts";
+import { getSupportedMarket, SUPPORTED_MARKETS, type SupportedMarket } from "../lib/markets.ts";
 
 type Stage = "request" | "plan" | "calling" | "results";
 
@@ -19,11 +20,21 @@ type Quote = {
   note?: string;
 };
 
-const suppliers = [
-  { id: "autohub", name: "AutoHub Industrial", area: "Industrial Area", phone: "+254 7•• ••• 101", fixturePhone: "+254700000101" },
-  { id: "kirinyaga", name: "Kirinyaga Parts Co.", area: "Kirinyaga Road", phone: "+254 7•• ••• 102", fixturePhone: "+254700000102" },
-  { id: "mombasa-road", name: "Mombasa Road Motors", area: "Mombasa Road", phone: "+254 7•• ••• 103", fixturePhone: "+254700000103" },
-];
+type UiSupplier = { id: string; name: string; area: string; phone: string; fixturePhone: string };
+
+const supplierTemplates = [
+  { id: "independent-dealer", name: "Independent Parts Dealer", area: "Local specialist" },
+  { id: "city-spares", name: "City Spares Centre", area: "Multi-brand stockist" },
+  { id: "regional-distributor", name: "Regional Parts Distributor", area: "Delivery network" },
+] as const;
+
+function suppliersForMarket(market: SupportedMarket): UiSupplier[] {
+  return supplierTemplates.map((supplier, index) => ({
+    ...supplier,
+    fixturePhone: market.fixturePhones[index],
+    phone: market.fixturePhones[index].replace(/\d(?=\d{3})/g, "•"),
+  }));
+}
 
 const quotes: Quote[] = [
   {
@@ -80,7 +91,7 @@ const formatMoney = (value: number, currency = "KES", locale = "en-KE") =>
     maximumFractionDigits: 0,
   }).format(value);
 
-function executionQuotes(execution: SourcingExecution): Quote[] {
+function executionQuotes(execution: SourcingExecution, supplierList: UiSupplier[]): Quote[] {
   return execution.quotes.map((quote, index) => {
     const result = quote.result ?? {};
     const compatible = result.compatibility === "confirmed";
@@ -92,7 +103,7 @@ function executionQuotes(execution: SourcingExecution): Quote[] {
     return {
       id: index + 1,
       supplier: quote.supplierName,
-      area: suppliers.find((supplier) => supplier.id === quote.supplierId)?.area ?? "Supplier",
+      area: supplierList.find((supplier) => supplier.id === quote.supplierId)?.area ?? "Supplier",
       status: compatible ? "Verified" : "Partial",
       brand: typeof result.brand === "string" && result.brand ? result.brand : "Unknown brand",
       price: typeof result.price_amount === "number" ? result.price_amount : 0,
@@ -122,9 +133,13 @@ export default function Home() {
     budget: "8000",
     location: "Nairobi CBD",
     timing: "Today",
+    countryCode: "KE",
+    locale: "en-KE",
   });
 
-  const displayQuotes = useMemo(() => execution ? executionQuotes(execution) : quotes, [execution]);
+  const market = useMemo(() => getSupportedMarket(form.countryCode) ?? SUPPORTED_MARKETS[0], [form.countryCode]);
+  const suppliers = useMemo(() => suppliersForMarket(market), [market]);
+  const displayQuotes = useMemo(() => execution ? executionQuotes(execution, suppliers) : quotes, [execution, suppliers]);
   const bestVerified = useMemo(
     () => displayQuotes.filter((quote) => quote.status === "Verified").sort((a, b) => a.price - b.price)[0] ?? displayQuotes[0],
     [displayQuotes],
@@ -132,6 +147,18 @@ export default function Home() {
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateMarket = (countryCode: string) => {
+    const nextMarket = getSupportedMarket(countryCode);
+    if (!nextMarket) return;
+    setForm((current) => ({
+      ...current,
+      countryCode: nextMarket.countryCode,
+      locale: nextMarket.defaultLocale,
+      budget: String(nextMarket.defaultBudget),
+      location: nextMarket.defaultLocation,
+    }));
   };
 
   const reviewPlan = async (event: FormEvent<HTMLFormElement>) => {
@@ -148,11 +175,11 @@ export default function Home() {
           part: form.part,
           fitmentReference: form.chassis,
           budgetAmount: Number(form.budget),
-          currency: "KES",
+          currency: market.currency,
           deliveryLocation: form.location,
           neededBy: form.timing,
-          countryCode: "KE",
-          locale: "en-KE",
+          countryCode: market.countryCode,
+          locale: form.locale,
           suppliers: suppliers.map((supplier) => ({
             id: supplier.id,
             name: supplier.name,
@@ -261,7 +288,7 @@ export default function Home() {
           <span>SpareScout</span>
         </a>
         <div className="header-actions">
-          <span className="location-pill"><span className="status-dot" />Nairobi, KE</span>
+          <span className="location-pill"><span className="status-dot" />{market.countryName} · {market.countryCode}</span>
           <button className="avatar" aria-label="Open account menu">BK</button>
         </div>
       </header>
@@ -271,12 +298,12 @@ export default function Home() {
           <p className="eyebrow">Phone-powered parts sourcing</p>
           <h1>The right part.<br /><em>One round of calls.</em></h1>
           <p className="hero-description">
-            SpareScout calls trusted parts dealers, verifies fitment, and turns every
-            conversation into a quote you can compare.
+            SpareScout calls parts dealers in supported markets, verifies fitment, and turns
+            every conversation into a localized quote you can compare.
           </p>
         </div>
         <div className="hero-proof" aria-label="Product metrics">
-          <div><strong>3×</strong><span>faster sourcing</span></div>
+          <div><strong>17</strong><span>CALL-E markets</span></div>
           <div><strong>100%</strong><span>human-approved</span></div>
           <div><strong>0</strong><span>surprise purchases</span></div>
         </div>
@@ -286,7 +313,7 @@ export default function Home() {
         <span className="mode-icon" aria-hidden="true">◇</span>
         <div>
           <strong>Safe demo mode</strong>
-          <span>Explore the full workflow with realistic sample calls. No phone calls or reservations will be made.</span>
+          <span>Switch markets and call languages across the supported CALL-E network. No phone calls or reservations will be made.</span>
         </div>
         <span className="mode-chip">DRY RUN</span>
       </div>
@@ -300,6 +327,22 @@ export default function Home() {
 
           <form onSubmit={reviewPlan}>
             <div className="field-grid">
+              <label className="field">
+                <span>Calling market</span>
+                <select value={form.countryCode} onChange={(event) => updateMarket(event.target.value)}>
+                  {SUPPORTED_MARKETS.map((candidate) => (
+                    <option value={candidate.countryCode} key={candidate.countryCode}>{candidate.countryName}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Call language</span>
+                <select value={form.locale} onChange={(event) => updateField("locale", event.target.value)}>
+                  {market.locales.map((locale) => (
+                    <option value={locale.code} key={locale.code}>{locale.label}</option>
+                  ))}
+                </select>
+              </label>
               <label className="field field-wide">
                 <span>Vehicle</span>
                 <input value={form.vehicle} onChange={(event) => updateField("vehicle", event.target.value)} required />
@@ -315,7 +358,7 @@ export default function Home() {
               </label>
               <label className="field">
                 <span>Budget ceiling</span>
-                <div className="input-prefix"><b>KSh</b><input type="number" min="1" value={form.budget} onChange={(event) => updateField("budget", event.target.value)} required /></div>
+                <div className="input-prefix"><b>{market.currency}</b><input type="number" min="1" value={form.budget} onChange={(event) => updateField("budget", event.target.value)} required /></div>
               </label>
               <label className="field">
                 <span>Needed by</span>
@@ -395,7 +438,7 @@ export default function Home() {
             <div className="summary-state">
               <p className="eyebrow">Sourcing complete</p>
               <h2>{displayQuotes.filter((quote) => quote.status === "Verified").length} verified options found.</h2>
-              <p>Best verified price is <strong>{formatMoney(bestVerified.price)}</strong>, with evidence attached.</p>
+              <p>Best verified price is <strong>{formatMoney(bestVerified.price, market.currency, form.locale)}</strong>, with evidence attached.</p>
               <div className="summary-stats"><div><b>{displayQuotes.length}/{suppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>{execution?.mode === "live" ? "Live" : "Fixture"}</b><span>{execution?.mode === "live" ? "CALL-E run" : "safe mode"}</span></div></div>
               <button className="secondary-button" type="button" onClick={resetDemo}>Start another search</button>
             </div>
@@ -411,7 +454,7 @@ export default function Home() {
               <article className={`quote-card ${selectedQuote === quote.id ? "selected" : ""}`} key={quote.id}>
                 {quote.id === bestVerified.id && <span className="best-tag">BEST VERIFIED OFFER</span>}
                 <div className="quote-top"><div><p>{quote.area}</p><h3>{quote.supplier}</h3></div><span className={`fitment ${quote.status.toLowerCase()}`}>{quote.status}</span></div>
-                <div className="quote-price"><strong>{formatMoney(quote.price)}</strong><span>{quote.brand} · new</span></div>
+                <div className="quote-price"><strong>{formatMoney(quote.price, market.currency, form.locale)}</strong><span>{quote.brand} · new</span></div>
                 <dl><div><dt>Availability</dt><dd>{quote.stock}</dd></div><div><dt>Delivery</dt><dd>{quote.delivery}</dd></div><div><dt>Confidence</dt><dd>{quote.confidence}%</dd></div></dl>
                 <div className="confidence-bar"><span style={{ width: `${quote.confidence}%` }} /></div>
                 <details><summary>View call evidence <span>+</span></summary><p>“{quote.evidence}”</p></details>
@@ -428,7 +471,7 @@ export default function Home() {
         </section>
       )}
 
-      <footer><p>Built for people who know that the right answer is often still on the other end of a phone.</p><span>Powered by CALL-E · Dry-run prototype</span></footer>
+      <footer><p>Built for people who know that the right answer is often still on the other end of a phone.</p><span>Powered by CALL-E · 17 supported markets · Approval gated</span></footer>
     </main>
   );
 }
