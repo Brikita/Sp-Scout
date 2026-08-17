@@ -5,6 +5,7 @@ const primaryLinks = [
   { href: "/how-it-works", label: "How it works" },
   { href: "/markets", label: "Markets" },
   { href: "/safety", label: "Safety" },
+  { href: "/history", label: "History" },
   { href: "/about", label: "About" },
 ];
 
@@ -29,6 +30,7 @@ export function SiteFooter() {
       <p>Phone-powered parts sourcing with evidence, boundaries, and a human decision at every consequential step.</p>
       <nav aria-label="Footer navigation">
         <Link href="/pilot">Pilot evidence</Link>
+        <Link href="/history">Request history</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/safety">Safety</Link>
         <Link href="/">Try the demo</Link>

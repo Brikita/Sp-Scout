@@ -36,6 +36,7 @@ test("server-renders every public product page with shared navigation", async ()
     ["/safety", /real-world side effect/],
     ["/privacy", /Collect what the sourcing decision needs/],
     ["/pilot", /pilot has not started/i],
+    ["/history", /Your sourcing ledger/],
   ];
 
   for (const [path, expected] of pages) {
@@ -50,10 +51,11 @@ test("server-renders every public product page with shared navigation", async ()
 });
 
 test("keeps real-world side effects behind explicit approval", async () => {
-  const [page, layout, packageJson] = await Promise.all([
+  const [page, layout, packageJson, historyRoute] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/sourcing/requests/[id]/route.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /Approve 3 demo calls/);
@@ -64,4 +66,6 @@ test("keeps real-world side effects behind explicit approval", async () => {
   assert.match(layout, /SpareScout — Phone-powered parts sourcing/);
   assert.doesNotMatch(layout, /codex-preview|_sites-preview/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
+  assert.match(historyRoute, /authorization/);
+  assert.match(historyRoute, /hashHistoryAccessToken/);
 });

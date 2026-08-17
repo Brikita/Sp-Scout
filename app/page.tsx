@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isTerminalExecution, type SourcingExecution } from "../lib/calle/contracts.ts";
 import { getSupportedMarket, SUPPORTED_MARKETS, type SupportedMarket } from "../lib/markets.ts";
+import { rememberHistoryAccess } from "../lib/history-store.ts";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
 type Stage = "request" | "plan" | "calling" | "results";
@@ -233,8 +234,13 @@ export default function Home() {
           })),
         }),
       });
-      const payload = await response.json() as { approvalToken?: string; error?: string };
+      const payload = await response.json() as {
+        approvalToken?: string;
+        historyAccess?: { requestId: string; token: string };
+        error?: string;
+      };
       if (!response.ok || !payload.approvalToken) throw new Error(payload.error ?? "Unable to prepare the call plan.");
+      if (payload.historyAccess) rememberHistoryAccess(payload.historyAccess);
       setApprovalToken(payload.approvalToken);
       setStage("plan");
       setSelectedQuote(null);
