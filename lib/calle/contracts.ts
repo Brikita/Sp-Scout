@@ -53,6 +53,10 @@ export type SourcingExecution = {
   completedAt: string | null;
 };
 
+export function isTerminalExecution(execution: SourcingExecution): boolean {
+  return execution.status === "completed" || execution.status === "failed" || execution.status === "canceled";
+}
+
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 const COUNTRY_PATTERN = /^[A-Z]{2}$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;

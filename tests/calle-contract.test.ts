@@ -4,11 +4,12 @@ import { signApproval, verifyApproval } from "../lib/calle/approval.ts";
 import {
   buildCallTask,
   createSourcingCallPlan,
+  isTerminalExecution,
   parseSourcingRequest,
   type SourcingRequest,
 } from "../lib/calle/contracts.ts";
 import { executeFixture } from "../lib/calle/fixtures.ts";
-import { executeSourcingPlan } from "../lib/calle/server.ts";
+import { executeSourcingPlan, getSourcingExecution } from "../lib/calle/server.ts";
 
 const request: SourcingRequest = {
   executionMode: "fixture",
@@ -69,6 +70,15 @@ test("returns deterministic structured fixture quotes without a call", () => {
   assert.match(String(execution.quotes[0].evidence[0]), /NKE165-705K9/);
 });
 
+test("recognizes every terminal CALL-E state", () => {
+  const base = executeFixture(createSourcingCallPlan(request));
+  assert.equal(isTerminalExecution(base), true);
+  assert.equal(isTerminalExecution({ ...base, status: "failed" }), true);
+  assert.equal(isTerminalExecution({ ...base, status: "canceled" }), true);
+  assert.equal(isTerminalExecution({ ...base, status: "queued" }), false);
+  assert.equal(isTerminalExecution({ ...base, status: "in_progress" }), false);
+});
+
 test("uses the official SDK with schemas and an idempotency key in live mode", async () => {
   let outbound: Request | undefined;
   const livePlan = createSourcingCallPlan({ ...request, executionMode: "live" });
@@ -119,4 +129,61 @@ test("uses the official SDK with schemas and an idempotency key in live mode", a
   assert.equal((body.recipients as unknown[]).length, 2);
   assert.ok(body.result_schema);
   assert.ok(body.recipient_result_schema);
+});
+
+test("polls an existing CALL-E run without starting another call", async () => {
+  let outbound: Request | undefined;
+  const execution = await getSourcingExecution("call_existing_123", request.suppliers, {
+    mode: "live",
+    apiKey: "calle_test_key",
+    fetch: async (candidate) => {
+      outbound = candidate;
+      return Response.json({
+        id: "call_existing_123",
+        object: "call_task",
+        status: "completed",
+        task: "source a part",
+        recipients: request.suppliers.map((supplier, index) => ({
+          id: `recipient_${index + 1}`,
+          phones: [supplier.phone],
+          locale: request.locale,
+          region: request.countryCode,
+          status: "completed",
+          structured_result: {
+            part_found: true,
+            compatibility: "confirmed",
+            brand: "SKF",
+            condition: "new",
+            price_amount: 6500,
+            currency: "KES",
+            available_quantity: 1,
+            delivery_available: "yes",
+            delivery_eta: "today",
+            reservation_possible: "yes",
+            evidence: ["Supplier confirmed the fitment reference."],
+            notes: "",
+          },
+          summary: "Quote collected.",
+          attempts: [],
+        })),
+        structured_result: { suppliers_contacted: 2, quotes_received: 2, compatible_quotes: 2 },
+        summary: "Two compatible quotes collected.",
+        task_completed: true,
+        completion_confidence: { score: 0.96, label: "high" },
+        evidence: ["Two suppliers provided compatible quotes."],
+        metadata: { sparescout_plan_id: "request-123" },
+        failure_code: null,
+        failure_message: null,
+        created_at: "2026-08-17T08:00:00.000Z",
+        completed_at: "2026-08-17T08:04:00.000Z",
+      });
+    },
+  });
+
+  assert.ok(outbound);
+  assert.equal(outbound.method, "GET");
+  assert.match(outbound.url, /call_existing_123$/);
+  assert.equal(execution.status, "completed");
+  assert.equal(execution.quotes.length, 2);
+  assert.equal(execution.quotes[0].supplierId, request.suppliers[0].id);
 });

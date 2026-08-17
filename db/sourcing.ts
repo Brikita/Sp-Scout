@@ -1,4 +1,4 @@
-import { getD1 } from "./index";
+import { getD1, type D1Binding, type D1Statement } from "./index";
 import { ensureSourcingStorage } from "./init";
 import { approvalFingerprint } from "../lib/calle/approval";
 import { maskPhone, type SourcingCallPlan, type SourcingExecution } from "../lib/calle/contracts";
@@ -79,11 +79,29 @@ export async function saveCallExecution(
   await ensureSourcingStorage(db);
   const fingerprint = await approvalFingerprint(approvalToken);
   const now = new Date().toISOString();
-  const runId = `${plan.id}:${execution.callId}`;
   const statements = [
     db.prepare(
       "UPDATE call_approvals SET consumed_at = ? WHERE request_id = ? AND plan_fingerprint = ?",
     ).bind(now, plan.id, fingerprint),
+    ...executionStatements(plan.id, execution, now, db),
+  ];
+  await db.batch(statements);
+}
+
+function requestStatusFor(execution: SourcingExecution): string {
+  if (execution.status === "completed") return "quotes_ready";
+  if (execution.status === "failed" || execution.status === "canceled") return "calls_failed";
+  return "calls_in_progress";
+}
+
+function executionStatements(
+  requestId: string,
+  execution: SourcingExecution,
+  now: string,
+  db: D1Binding,
+): D1Statement[] {
+  const runId = `${requestId}:${execution.callId}`;
+  return [
     db.prepare(
       `INSERT INTO call_runs (
         id, request_id, provider_call_id, mode, status, task_completed, confidence_score,
@@ -100,7 +118,7 @@ export async function saveCallExecution(
         updated_at = excluded.updated_at`,
     ).bind(
       runId,
-      plan.id,
+      requestId,
       execution.callId,
       execution.mode,
       execution.status,
@@ -126,7 +144,7 @@ export async function saveCallExecution(
           evidence_json = excluded.evidence_json`,
       ).bind(
         `${runId}:${quote.supplierId}`,
-        plan.id,
+        requestId,
         runId,
         quote.supplierId,
         quote.supplierName,
@@ -138,12 +156,21 @@ export async function saveCallExecution(
       ),
     ),
     db.prepare("UPDATE sourcing_requests SET status = ?, updated_at = ? WHERE id = ?").bind(
-      execution.status === "completed" ? "quotes_ready" : "calls_in_progress",
+      requestStatusFor(execution),
       now,
-      plan.id,
+      requestId,
     ),
   ];
-  await db.batch(statements);
+}
+
+export async function saveCallExecutionUpdate(
+  requestId: string,
+  execution: SourcingExecution,
+  db = getD1(),
+): Promise<void> {
+  await ensureSourcingStorage(db);
+  const now = new Date().toISOString();
+  await db.batch(executionStatements(requestId, execution, now, db));
 }
 
 type RequestRow = {
@@ -193,6 +220,17 @@ type QuoteRow = {
   summary: string | null;
   evidence_json: string;
   created_at: string;
+};
+
+type LiveRunRow = {
+  execution_mode: string;
+};
+
+type InternalSupplierRow = {
+  supplier_id: string;
+  name: string;
+  phone_e164: string;
+  area: string | null;
 };
 
 function parseJson(value: string | null): unknown {
@@ -274,6 +312,37 @@ export async function getSourcingRequestHistory(requestId: string, db = getD1())
           evidence: parseJson(quote.evidence_json),
           createdAt: quote.created_at,
         })),
+    })),
+  };
+}
+
+export async function getLiveCallContext(
+  requestId: string,
+  providerCallId: string,
+  db = getD1(),
+) {
+  await ensureSourcingStorage(db);
+  const run = await db.prepare(
+    `SELECT request.execution_mode
+     FROM sourcing_requests AS request
+     INNER JOIN call_runs AS run ON run.request_id = request.id
+     WHERE request.id = ? AND run.provider_call_id = ?`,
+  ).bind(requestId, providerCallId).first<LiveRunRow>();
+  if (!run || run.execution_mode !== "live") return null;
+
+  const { results } = await db.prepare(
+    `SELECT supplier_id, name, phone_e164, area
+     FROM request_suppliers WHERE request_id = ? ORDER BY created_at, supplier_id`,
+  ).bind(requestId).all<InternalSupplierRow>();
+
+  return {
+    requestId,
+    callId: providerCallId,
+    suppliers: results.map((supplier) => ({
+      id: supplier.supplier_id,
+      name: supplier.name,
+      phone: supplier.phone_e164,
+      area: supplier.area ?? undefined,
     })),
   };
 }
