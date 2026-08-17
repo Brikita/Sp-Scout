@@ -40,6 +40,7 @@ flowchart LR
 - A live-pilot selector that stays disabled until the trusted server confirms mode, API key, and approval secret are all configured.
 - Durable D1 requests, suppliers, approvals, call runs, quotes, and evidence.
 - A user-facing sourcing ledger protected by a separate random per-request history credential; only its SHA-256 hash is stored server-side.
+- Credential-protected permanent deletion and a 30-day sourcing-record retention sweep.
 - Credential-protected, read-only live status polling that cannot start another call and resumes from Request History after a browser interruption.
 - Masked supplier numbers in plans and history responses.
 - Seventeen current CALL-E recipient regions with market-specific language, currency, delivery, budget, and fixture configuration.
@@ -92,6 +93,7 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 | `/api/calls/execute` | `POST` | Starts only the explicitly approved plan. |
 | `/api/calls/status/:requestId/:callId` | `GET` | With the request history credential, retrieves and persists an existing live run; cannot create one. |
 | `/api/sourcing/requests/:id` | `GET` | Returns masked durable request history only with its bearer history credential. |
+| `/api/sourcing/requests/:id` | `DELETE` | Permanently deletes the credential-matched request and related durable records; never starts a call. |
 | `/api/pilot/metrics` | `GET` | Aggregates live pilot evidence and excludes fixtures. |
 
 ## Data and safety boundary
@@ -99,6 +101,7 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 - Full supplier numbers stay server-side and are only used for an approved execution.
 - Browser-visible plans and history use masked numbers.
 - The browser remembers history credentials for up to 20 requests; it is not the source of truth for the durable D1 records.
+- A matching history credential can permanently delete its durable record. Remaining sourcing data is pruned after 30 days when database activity resumes.
 - CALL-E summaries, transcripts, and structured values are treated as untrusted external data.
 - The sourcing task cannot accept substitute parts or agree to commercial terms.
 - Selecting an offer does not contact a supplier; it only opens a separate reservation preview.

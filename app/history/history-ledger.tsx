@@ -49,7 +49,14 @@ type HistoryRequest = {
   suppliers: Supplier[];
   runs: Run[];
 };
-type LedgerItem = { access: RememberedHistoryAccess; request?: HistoryRequest; error?: string; notice?: string };
+type LedgerItem = {
+  access: RememberedHistoryAccess;
+  request?: HistoryRequest;
+  error?: string;
+  notice?: string;
+  deleteError?: string;
+  deleting?: boolean;
+};
 
 function label(value: string): string {
   return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
@@ -123,6 +130,31 @@ export function HistoryLedger() {
     setItems((current) => current?.filter((item) => item.access.requestId !== requestId) ?? []);
   };
 
+  const deleteRecord = async (access: RememberedHistoryAccess) => {
+    const confirmed = window.confirm(
+      "Permanently delete this request, its supplier details, call evidence, and quotes from SpareScout? This cannot be undone.",
+    );
+    if (!confirmed) return;
+    setItems((current) => current?.map((item) => item.access.requestId === access.requestId
+      ? { ...item, deleting: true, deleteError: undefined }
+      : item) ?? []);
+    try {
+      const response = await fetch(`/api/sourcing/requests/${encodeURIComponent(access.requestId)}`, {
+        method: "DELETE",
+        headers: { authorization: `Bearer ${access.token}` },
+      });
+      const payload = await response.json() as { deleted?: boolean; error?: string };
+      if (!response.ok || !payload.deleted) throw new Error(payload.error ?? "The durable record could not be deleted.");
+      forgetHistoryAccess(access.requestId);
+      setItems((current) => current?.filter((item) => item.access.requestId !== access.requestId) ?? []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The durable record could not be deleted.";
+      setItems((current) => current?.map((item) => item.access.requestId === access.requestId
+        ? { ...item, deleting: false, deleteError: message }
+        : item) ?? []);
+    }
+  };
+
   if (items === null) return <section className="history-loading" aria-live="polite">Opening your private ledger…</section>;
   if (!items.length) {
     return (
@@ -163,6 +195,7 @@ export function HistoryLedger() {
             ))}
           </div>
           {item.notice && <p className="history-notice" role="status">{item.notice} The last durable status is shown below.</p>}
+          {item.deleteError && <p className="history-notice" role="alert">{item.deleteError}</p>}
           {!item.request.runs.length ? (
             <p className="history-pending">Plan saved. No approved call run has been recorded.</p>
           ) : item.request.runs.map((run) => (
@@ -184,7 +217,12 @@ export function HistoryLedger() {
           ))}
           <div className="history-card-foot">
             <small>Request {item.request.id}</small>
-            <button type="button" onClick={() => forget(item.request!.id)}>Forget on this device</button>
+            <div className="history-card-actions">
+              <button type="button" onClick={() => forget(item.request!.id)}>Forget on this device</button>
+              <button className="history-delete" type="button" disabled={item.deleting} onClick={() => void deleteRecord(item.access)}>
+                {item.deleting ? "Deleting record…" : "Delete durable record"}
+              </button>
+            </div>
           </div>
         </article>
       ) : (
@@ -194,7 +232,7 @@ export function HistoryLedger() {
           <button type="button" onClick={() => forget(item.access.requestId)}>Forget on this device</button>
         </article>
       ))}
-      <p className="source-note">“Forget” removes this browser’s access credential only. It does not delete the durable server record.</p>
+      <p className="source-note">“Forget” removes this browser’s credential only. “Delete durable record” permanently removes the request and its related server-side records. Remaining records are pruned after 30 days.</p>
     </section>
   );
 }

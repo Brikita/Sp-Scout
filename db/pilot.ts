@@ -1,5 +1,5 @@
-import { ensureSourcingStorage } from "./init";
 import { getD1 } from "./index";
+import { purgeExpiredSourcingData } from "./sourcing";
 import {
   calculatePilotMetrics,
   type PilotQuoteRecord,
@@ -20,7 +20,7 @@ type QuoteRow = { request_id: string; supplier_id: string; status: string; resul
 type CountRow = { count: number };
 
 export async function getPilotMetrics(db = getD1()) {
-  await ensureSourcingStorage(db);
+  await purgeExpiredSourcingData(db);
   const [runRows, supplierRows, quoteRows, fixtureCount] = await Promise.all([
     db.prepare(
       `SELECT run.request_id, run.status, request.created_at AS request_created_at,

@@ -13,6 +13,7 @@
 9. Select an offer and open the reservation preview. Confirm that this does not contact the supplier.
 10. Visit **Pilot evidence** and confirm that fixture records are excluded from the displayed live metrics.
 11. Visit **Request history** and reopen the completed request from the private ledger. Confirm that supplier numbers remain masked and call evidence is preserved.
+12. Confirm the ledger offers separate **Forget on this device** and **Delete durable record** controls. Do not delete the record until the rest of the walkthrough is complete.
 
 ## What the safe demo proves
 

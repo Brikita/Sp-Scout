@@ -66,6 +66,7 @@ The live selector stays disabled unless mode, API key, and approval secret are a
 - CALL-E credentials and full supplier numbers stay in the trusted server runtime.
 - Plans and history mask supplier numbers.
 - Each request receives a random history credential; D1 stores only its SHA-256 hash.
+- The credential can permanently delete its matching request and related durable records; remaining sourcing data is pruned after 30 days.
 - CALL-E summaries, evidence, and structured values are treated as untrusted external data.
 - Do not enter payment data, medical information, unrelated personal data, or unauthorized contacts.
 

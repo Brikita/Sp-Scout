@@ -235,6 +235,7 @@ footer { border-top: 1px solid var(--line); margin: 0 clamp(22px, 5vw, 76px); pa
 .history-quotes summary { display: flex; justify-content: space-between; gap: 18px; padding: 13px 15px; cursor: pointer; list-style: none; }.history-quotes summary span, .history-quotes summary strong { display: block; }.history-quotes summary span { color: #8f9a91; font-size: 9px; }.history-quotes summary strong { color: white; margin-bottom: 3px; font-size: 11px; }.history-quotes summary b { color: var(--acid); font-size: 11px; }
 .history-quotes details > p, .history-quotes details > ul { margin: 0; padding: 0 15px 12px; color: #b1bab3; font-size: 10px; line-height: 1.55; }.history-quotes details > ul { padding-left: 32px; }
 .history-card-foot { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-top: 18px; }.history-card-foot small { color: #9ca29b; font: 9px var(--font-geist-mono); }
+.history-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 14px; }.history-card-actions .history-delete { color: #9b3f31; }.history-card-actions button:disabled { opacity: .55; cursor: wait; }
 .history-error { padding: 28px 0; }.history-error h2 { margin: 0; }.history-error p { color: var(--muted); }
 
 @media (max-width: 960px) {

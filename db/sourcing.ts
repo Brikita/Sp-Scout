@@ -2,13 +2,64 @@ import { getD1, type D1Binding, type D1Statement } from "./index";
 import { ensureSourcingStorage } from "./init";
 import { approvalFingerprint } from "../lib/calle/approval";
 import { maskPhone, type SourcingCallPlan, type SourcingExecution } from "../lib/calle/contracts";
+import { sourcingRetentionCutoff } from "../lib/retention";
+
+const retentionSweepTimes = new WeakMap<object, number>();
+const RETENTION_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+
+export async function purgeExpiredSourcingData(db = getD1(), now = new Date()): Promise<void> {
+  await ensureSourcingStorage(db);
+  const previousSweep = retentionSweepTimes.get(db as object) ?? 0;
+  if (now.getTime() - previousSweep < RETENTION_SWEEP_INTERVAL_MS) return;
+  retentionSweepTimes.set(db as object, now.getTime());
+  const cutoff = sourcingRetentionCutoff(now);
+  try {
+    await db.batch([
+      db.prepare(`DELETE FROM webhook_events WHERE provider_call_id IN (
+        SELECT run.provider_call_id FROM call_runs AS run
+        INNER JOIN sourcing_requests AS request ON request.id = run.request_id
+        WHERE request.created_at < ?
+      )`).bind(cutoff),
+      db.prepare("DELETE FROM supplier_quotes WHERE request_id IN (SELECT id FROM sourcing_requests WHERE created_at < ?)").bind(cutoff),
+      db.prepare("DELETE FROM call_runs WHERE request_id IN (SELECT id FROM sourcing_requests WHERE created_at < ?)").bind(cutoff),
+      db.prepare("DELETE FROM call_approvals WHERE request_id IN (SELECT id FROM sourcing_requests WHERE created_at < ?)").bind(cutoff),
+      db.prepare("DELETE FROM request_suppliers WHERE request_id IN (SELECT id FROM sourcing_requests WHERE created_at < ?)").bind(cutoff),
+      db.prepare("DELETE FROM sourcing_requests WHERE created_at < ?").bind(cutoff),
+    ]);
+  } catch (error) {
+    retentionSweepTimes.delete(db as object);
+    throw error;
+  }
+}
+
+export async function deleteSourcingRequest(
+  requestId: string,
+  historyAccessHash: string,
+  db = getD1(),
+): Promise<boolean> {
+  await ensureSourcingStorage(db);
+  const authorized = await db.prepare(
+    "SELECT id FROM sourcing_requests WHERE id = ? AND history_access_hash = ?",
+  ).bind(requestId, historyAccessHash).first<{ id: string }>();
+  if (!authorized) return false;
+
+  await db.batch([
+    db.prepare("DELETE FROM webhook_events WHERE provider_call_id IN (SELECT provider_call_id FROM call_runs WHERE request_id = ?)").bind(requestId),
+    db.prepare("DELETE FROM supplier_quotes WHERE request_id = ?").bind(requestId),
+    db.prepare("DELETE FROM call_runs WHERE request_id = ?").bind(requestId),
+    db.prepare("DELETE FROM call_approvals WHERE request_id = ?").bind(requestId),
+    db.prepare("DELETE FROM request_suppliers WHERE request_id = ?").bind(requestId),
+    db.prepare("DELETE FROM sourcing_requests WHERE id = ? AND history_access_hash = ?").bind(requestId, historyAccessHash),
+  ]);
+  return true;
+}
 
 export async function savePlannedRequest(
   plan: SourcingCallPlan,
   historyAccessHash: string,
   db = getD1(),
 ): Promise<void> {
-  await ensureSourcingStorage(db);
+  await purgeExpiredSourcingData(db);
   const request = plan.request;
   const statements = [
     db.prepare(
@@ -253,7 +304,7 @@ export async function getSourcingRequestHistory(
   historyAccessHash: string,
   db = getD1(),
 ) {
-  await ensureSourcingStorage(db);
+  await purgeExpiredSourcingData(db);
   const request = await db.prepare(
     `SELECT id, status, execution_mode, vehicle, part, fitment_reference, budget_amount,
       currency, delivery_location, needed_by, country_code, locale, created_at, updated_at
@@ -332,7 +383,7 @@ export async function getLiveCallContext(
   historyAccessHash: string,
   db = getD1(),
 ) {
-  await ensureSourcingStorage(db);
+  await purgeExpiredSourcingData(db);
   const run = await db.prepare(
     `SELECT request.execution_mode
      FROM sourcing_requests AS request

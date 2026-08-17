@@ -53,12 +53,14 @@ test("server-renders every public product page with shared navigation", async ()
 });
 
 test("keeps real-world side effects behind explicit approval", async () => {
-  const [page, layout, packageJson, historyRoute, statusRoute] = await Promise.all([
+  const [page, layout, packageJson, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../app/api/sourcing/requests/[id]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/calls/status/[requestId]/[callId]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/history/history-ledger.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/sourcing.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /Approve 3 demo calls/);
@@ -74,4 +76,10 @@ test("keeps real-world side effects behind explicit approval", async () => {
   assert.match(statusRoute, /authorization/);
   assert.match(statusRoute, /hashHistoryAccessToken/);
   assert.doesNotMatch(statusRoute, /calls\.create|executeSourcingPlan/);
+  assert.match(historyRoute, /export async function DELETE/);
+  assert.match(historyRoute, /deleteSourcingRequest\(id, await hashHistoryAccessToken\(token\)\)/);
+  assert.match(historyLedger, /Permanently delete this request/);
+  assert.match(historyLedger, /Delete durable record/);
+  assert.match(sourcingDatabase, /DELETE FROM webhook_events/);
+  assert.match(sourcingDatabase, /DELETE FROM sourcing_requests WHERE id = \? AND history_access_hash = \?/);
 });
