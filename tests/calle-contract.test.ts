@@ -11,6 +11,7 @@ import { executeFixture } from "../lib/calle/fixtures.ts";
 import { executeSourcingPlan } from "../lib/calle/server.ts";
 
 const request: SourcingRequest = {
+  executionMode: "fixture",
   vehicle: "2014 Toyota Fielder",
   part: "front-left wheel bearing",
   fitmentReference: "NKE165-705K9",
@@ -70,8 +71,8 @@ test("returns deterministic structured fixture quotes without a call", () => {
 
 test("uses the official SDK with schemas and an idempotency key in live mode", async () => {
   let outbound: Request | undefined;
-  const plan = createSourcingCallPlan(request);
-  const execution = await executeSourcingPlan(plan, "approved-plan-token", {
+  const livePlan = createSourcingCallPlan({ ...request, executionMode: "live" });
+  const execution = await executeSourcingPlan(livePlan, "approved-plan-token", {
     mode: "live",
     apiKey: "calle_test_key",
     fetch: async (candidate) => {
@@ -81,7 +82,7 @@ test("uses the official SDK with schemas and an idempotency key in live mode", a
           id: "call_test_123",
           object: "call_task",
           status: "queued",
-          task: plan.task,
+          task: livePlan.task,
           recipients: request.suppliers.map((supplier, index) => ({
             id: `recipient_${index + 1}`,
             phones: [supplier.phone],
@@ -97,7 +98,7 @@ test("uses the official SDK with schemas and an idempotency key in live mode", a
           task_completed: null,
           completion_confidence: null,
           evidence: [],
-          metadata: { sparescout_plan_id: plan.id },
+          metadata: { sparescout_plan_id: livePlan.id },
           failure_code: null,
           failure_message: null,
           created_at: "2026-08-17T08:00:00.000Z",

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import type { SourcingExecution } from "../lib/calle/contracts.ts";
 
 type Stage = "request" | "plan" | "calling" | "results";
 
@@ -19,9 +20,9 @@ type Quote = {
 };
 
 const suppliers = [
-  { name: "AutoHub Industrial", area: "Industrial Area", phone: "+254 7•• ••• 184" },
-  { name: "Kirinyaga Parts Co.", area: "Kirinyaga Road", phone: "+254 7•• ••• 920" },
-  { name: "Mombasa Road Motors", area: "Mombasa Road", phone: "+254 7•• ••• 447" },
+  { id: "autohub", name: "AutoHub Industrial", area: "Industrial Area", phone: "+254 7•• ••• 101", fixturePhone: "+254700000101" },
+  { id: "kirinyaga", name: "Kirinyaga Parts Co.", area: "Kirinyaga Road", phone: "+254 7•• ••• 102", fixturePhone: "+254700000102" },
+  { id: "mombasa-road", name: "Mombasa Road Motors", area: "Mombasa Road", phone: "+254 7•• ••• 103", fixturePhone: "+254700000103" },
 ];
 
 const quotes: Quote[] = [
@@ -72,18 +73,47 @@ const callActivity = [
   "Three conversations normalized into comparable offers",
 ];
 
-const formatKes = (value: number) =>
-  new Intl.NumberFormat("en-KE", {
+const formatMoney = (value: number, currency = "KES", locale = "en-KE") =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "KES",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
+
+function executionQuotes(execution: SourcingExecution): Quote[] {
+  return execution.quotes.map((quote, index) => {
+    const result = quote.result ?? {};
+    const compatible = result.compatibility === "confirmed";
+    const quantity = typeof result.available_quantity === "number" ? result.available_quantity : 0;
+    const baseConfidence = Math.round((execution.completionConfidence?.score ?? 0.75) * 100);
+    const evidence = Array.isArray(result.evidence)
+      ? result.evidence.find((item): item is string => typeof item === "string")
+      : undefined;
+    return {
+      id: index + 1,
+      supplier: quote.supplierName,
+      area: suppliers.find((supplier) => supplier.id === quote.supplierId)?.area ?? "Supplier",
+      status: compatible ? "Verified" : "Partial",
+      brand: typeof result.brand === "string" && result.brand ? result.brand : "Unknown brand",
+      price: typeof result.price_amount === "number" ? result.price_amount : 0,
+      stock: quantity > 0 ? `${quantity} in stock` : "Stock unknown",
+      delivery: typeof result.delivery_eta === "string" && result.delivery_eta ? result.delivery_eta : "Delivery unknown",
+      confidence: compatible ? baseConfidence : Math.max(45, baseConfidence - 25),
+      evidence: evidence ?? quote.summary ?? "No evidence returned.",
+      note: compatible ? undefined : "Compatibility needs manual confirmation before reservation.",
+    };
+  });
+}
 
 export default function Home() {
   const [stage, setStage] = useState<Stage>("request");
   const [activeActivity, setActiveActivity] = useState(0);
   const [selectedQuote, setSelectedQuote] = useState<number | null>(null);
   const [reservationReady, setReservationReady] = useState(false);
+  const [approvalToken, setApprovalToken] = useState<string | null>(null);
+  const [execution, setExecution] = useState<SourcingExecution | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     vehicle: "2014 Toyota Fielder",
     part: "Front-left wheel bearing",
@@ -93,37 +123,90 @@ export default function Home() {
     timing: "Today",
   });
 
+  const displayQuotes = useMemo(() => execution ? executionQuotes(execution) : quotes, [execution]);
   const bestVerified = useMemo(
-    () => quotes.filter((quote) => quote.status === "Verified").sort((a, b) => a.price - b.price)[0],
-    [],
+    () => displayQuotes.filter((quote) => quote.status === "Verified").sort((a, b) => a.price - b.price)[0] ?? displayQuotes[0],
+    [displayQuotes],
   );
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const reviewPlan = (event: FormEvent<HTMLFormElement>) => {
+  const reviewPlan = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setStage("plan");
-    setSelectedQuote(null);
-    setReservationReady(false);
+    setIsSubmitting(true);
+    setRequestError(null);
+    try {
+      const response = await fetch("/api/calls/plan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          executionMode: "fixture",
+          vehicle: form.vehicle,
+          part: form.part,
+          fitmentReference: form.chassis,
+          budgetAmount: Number(form.budget),
+          currency: "KES",
+          deliveryLocation: form.location,
+          neededBy: form.timing,
+          countryCode: "KE",
+          locale: "en-KE",
+          suppliers: suppliers.map((supplier) => ({
+            id: supplier.id,
+            name: supplier.name,
+            area: supplier.area,
+            phone: supplier.fixturePhone,
+          })),
+        }),
+      });
+      const payload = await response.json() as { approvalToken?: string; error?: string };
+      if (!response.ok || !payload.approvalToken) throw new Error(payload.error ?? "Unable to prepare the call plan.");
+      setApprovalToken(payload.approvalToken);
+      setStage("plan");
+      setSelectedQuote(null);
+      setReservationReady(false);
+      setExecution(null);
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Unable to prepare the call plan.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const runDryDemo = async () => {
+    if (!approvalToken) return;
     setStage("calling");
     setActiveActivity(0);
-    for (let index = 1; index < callActivity.length; index += 1) {
-      await new Promise((resolve) => window.setTimeout(resolve, 650));
-      setActiveActivity(index);
+    setRequestError(null);
+    const executionRequest = fetch("/api/calls/execute", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ approvalToken, approved: true }),
+    });
+    try {
+      for (let index = 1; index < callActivity.length; index += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+        setActiveActivity(index);
+      }
+      const response = await executionRequest;
+      const payload = await response.json() as { execution?: SourcingExecution; error?: string };
+      if (!response.ok || !payload.execution) throw new Error(payload.error ?? "Unable to run the approved fixture.");
+      setExecution(payload.execution);
+      setStage("results");
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Unable to run the approved fixture.");
+      setStage("plan");
     }
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
-    setStage("results");
   };
 
   const resetDemo = () => {
     setStage("request");
     setSelectedQuote(null);
     setReservationReady(false);
+    setApprovalToken(null);
+    setExecution(null);
+    setRequestError(null);
   };
 
   return (
@@ -201,9 +284,10 @@ export default function Home() {
                 <input value={form.location} onChange={(event) => updateField("location", event.target.value)} required />
               </label>
             </div>
-            <button className="primary-button" type="submit">
-              Review supplier call plan <span aria-hidden="true">→</span>
+            <button className="primary-button" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Preparing signed plan…" : "Review supplier call plan"} <span aria-hidden="true">→</span>
             </button>
+            {requestError && <p className="inline-error" role="alert">{requestError}</p>}
             <p className="button-note"><span aria-hidden="true">⌾</span> You will review every call before it starts</p>
           </form>
         </div>
@@ -241,6 +325,7 @@ export default function Home() {
               </div>
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>
               <button className="primary-button light" type="button" onClick={runDryDemo}>Approve 3 demo calls <span>→</span></button>
+              {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
               <button className="text-button" type="button" onClick={() => setStage("request")}>Edit request</button>
             </div>
           )}
@@ -265,8 +350,8 @@ export default function Home() {
             <div className="summary-state">
               <p className="eyebrow">Sourcing complete</p>
               <h2>Two verified options found.</h2>
-              <p>Best verified price is <strong>{formatKes(bestVerified.price)}</strong>, with same-day delivery.</p>
-              <div className="summary-stats"><div><b>3/3</b><span>answered</span></div><div><b>2</b><span>verified</span></div><div><b>3m 42s</b><span>elapsed</span></div></div>
+              <p>Best verified price is <strong>{formatMoney(bestVerified.price)}</strong>, with evidence attached.</p>
+              <div className="summary-stats"><div><b>{displayQuotes.length}/{suppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>Fixture</b><span>safe mode</span></div></div>
               <button className="secondary-button" type="button" onClick={resetDemo}>Start another search</button>
             </div>
           )}
@@ -277,11 +362,11 @@ export default function Home() {
         <section className="results-section" aria-labelledby="results-title">
           <div className="results-heading"><div><p className="eyebrow">03 · Compare verified offers</p><h2 id="results-title">Evidence, not guesswork.</h2></div><div className="legend"><span><i className="verified-dot" />Verified fitment</span><span><i className="partial-dot" />Needs confirmation</span></div></div>
           <div className="quote-grid">
-            {quotes.map((quote) => (
+            {displayQuotes.map((quote) => (
               <article className={`quote-card ${selectedQuote === quote.id ? "selected" : ""}`} key={quote.id}>
                 {quote.id === bestVerified.id && <span className="best-tag">BEST VERIFIED OFFER</span>}
                 <div className="quote-top"><div><p>{quote.area}</p><h3>{quote.supplier}</h3></div><span className={`fitment ${quote.status.toLowerCase()}`}>{quote.status}</span></div>
-                <div className="quote-price"><strong>{formatKes(quote.price)}</strong><span>{quote.brand} · new</span></div>
+                <div className="quote-price"><strong>{formatMoney(quote.price)}</strong><span>{quote.brand} · new</span></div>
                 <dl><div><dt>Availability</dt><dd>{quote.stock}</dd></div><div><dt>Delivery</dt><dd>{quote.delivery}</dd></div><div><dt>Confidence</dt><dd>{quote.confidence}%</dd></div></dl>
                 <div className="confidence-bar"><span style={{ width: `${quote.confidence}%` }} /></div>
                 <details><summary>View call evidence <span>+</span></summary><p>“{quote.evidence}”</p></details>
@@ -291,7 +376,7 @@ export default function Home() {
             ))}
           </div>
           <div className="reservation-bar">
-            <div><span className="step-number">04</span><p><strong>{selectedQuote ? `${quotes.find((quote) => quote.id === selectedQuote)?.supplier} selected` : "Choose an offer to continue"}</strong><small>A separate approval is always required before a reservation call.</small></p></div>
+            <div><span className="step-number">04</span><p><strong>{selectedQuote ? `${displayQuotes.find((quote) => quote.id === selectedQuote)?.supplier} selected` : "Choose an offer to continue"}</strong><small>A separate approval is always required before a reservation call.</small></p></div>
             <button disabled={!selectedQuote} onClick={() => setReservationReady(true)}>Preview reservation call</button>
           </div>
           {reservationReady && <div className="reservation-message" role="status"><span>✓</span><div><strong>Reservation preview ready</strong><p>Demo complete—no supplier was contacted and nothing was reserved.</p></div></div>}

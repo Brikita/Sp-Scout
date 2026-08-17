@@ -8,6 +8,7 @@ export type SourcingSupplier = {
 };
 
 export type SourcingRequest = {
+  executionMode: "fixture" | "live";
   vehicle: string;
   part: string;
   fitmentReference: string;
@@ -74,6 +75,9 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
   }
 
   const input = value as Record<string, unknown>;
+  if (input.executionMode !== "fixture" && input.executionMode !== "live") {
+    throw new Error("executionMode must be fixture or live.");
+  }
   const budgetAmount = Number(input.budgetAmount);
   if (!Number.isFinite(budgetAmount) || budgetAmount <= 0) {
     throw new Error("budgetAmount must be greater than zero.");
@@ -126,6 +130,7 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
   }
 
   return {
+    executionMode: input.executionMode,
     vehicle: requiredText(input.vehicle, "vehicle"),
     part: requiredText(input.part, "part"),
     fitmentReference: requiredText(input.fitmentReference, "fitmentReference"),

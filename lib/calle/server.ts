@@ -16,7 +16,10 @@ export async function executeSourcingPlan(
   approvalToken: string,
   config: CalleRuntimeConfig,
 ): Promise<SourcingExecution> {
-  if (config.mode === "fixture") return executeFixture(plan);
+  if (plan.request.executionMode === "fixture") return executeFixture(plan);
+  if (config.mode !== "live") {
+    throw new Error("Live calling is unavailable. Keep this request in fixture mode or configure the trusted server first.");
+  }
   if (!config.apiKey) throw new Error("Live calling is unavailable because CALLE_API_KEY is not configured.");
 
   const client = new CalleClient({

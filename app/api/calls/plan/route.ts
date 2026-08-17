@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const approvalToken = await signApproval(plan, getApprovalSecret(config.mode));
 
     return Response.json({
-      mode: config.mode,
+      mode: plan.request.executionMode === "fixture" ? "fixture" : config.mode,
       plan: {
         id: plan.id,
         createdAt: plan.createdAt,
