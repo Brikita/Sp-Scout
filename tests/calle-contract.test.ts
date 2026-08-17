@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { signApproval, verifyApproval } from "../lib/calle/approval.ts";
 import { calculateCalleCapabilities } from "../lib/calle/capabilities.ts";
+import { createHistoryAccessCredential, hashHistoryAccessToken } from "../lib/history-access.ts";
+import { parseRememberedHistoryAccess } from "../lib/history-store.ts";
 import {
   buildCallTask,
   createSourcingCallPlan,
@@ -49,6 +51,28 @@ test("exposes live calling only when every trusted runtime binding is present", 
   assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key" }).liveAvailable, false);
   assert.equal(calculateCalleCapabilities({ CALLE_MODE: "fixture", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, false);
   assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, true);
+});
+
+test("issues separate high-entropy credentials for private durable history", async () => {
+  const first = await createHistoryAccessCredential();
+  const second = await createHistoryAccessCredential();
+  assert.match(first.token, /^[A-Za-z0-9_-]{43}$/);
+  assert.match(first.hash, /^[a-f0-9]{64}$/);
+  assert.equal(await hashHistoryAccessToken(first.token), first.hash);
+  assert.notEqual(first.token, second.token);
+  assert.notEqual(first.hash, second.hash);
+});
+
+test("accepts only bounded, well-formed browser history capabilities", () => {
+  const valid = {
+    requestId: "550e8400-e29b-41d4-a716-446655440000",
+    token: "a".repeat(43),
+    savedAt: "2026-08-17T12:00:00.000Z",
+  };
+  assert.deepEqual(parseRememberedHistoryAccess(JSON.stringify([valid])), [valid]);
+  assert.deepEqual(parseRememberedHistoryAccess("not-json"), []);
+  assert.deepEqual(parseRememberedHistoryAccess(JSON.stringify([{ ...valid, token: "short" }])), []);
+  assert.equal(parseRememberedHistoryAccess(JSON.stringify(Array(25).fill(valid))).length, 20);
 });
 
 test("defines a valid localized configuration for every supported CALL-E market", () => {

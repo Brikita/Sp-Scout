@@ -3,15 +3,20 @@ import { ensureSourcingStorage } from "./init";
 import { approvalFingerprint } from "../lib/calle/approval";
 import { maskPhone, type SourcingCallPlan, type SourcingExecution } from "../lib/calle/contracts";
 
-export async function savePlannedRequest(plan: SourcingCallPlan, db = getD1()): Promise<void> {
+export async function savePlannedRequest(
+  plan: SourcingCallPlan,
+  historyAccessHash: string,
+  db = getD1(),
+): Promise<void> {
   await ensureSourcingStorage(db);
   const request = plan.request;
   const statements = [
     db.prepare(
       `INSERT INTO sourcing_requests (
         id, status, execution_mode, vehicle, part, fitment_reference, budget_amount,
-        currency, delivery_location, needed_by, country_code, locale, created_at, expires_at, updated_at
-      ) VALUES (?, 'awaiting_approval', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        currency, delivery_location, needed_by, country_code, locale, history_access_hash,
+        created_at, expires_at, updated_at
+      ) VALUES (?, 'awaiting_approval', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO NOTHING`,
     ).bind(
       plan.id,
@@ -25,6 +30,7 @@ export async function savePlannedRequest(plan: SourcingCallPlan, db = getD1()): 
       request.neededBy,
       request.countryCode,
       request.locale,
+      historyAccessHash,
       plan.createdAt,
       plan.expiresAt,
       plan.createdAt,
@@ -242,13 +248,17 @@ function parseJson(value: string | null): unknown {
   }
 }
 
-export async function getSourcingRequestHistory(requestId: string, db = getD1()) {
+export async function getSourcingRequestHistory(
+  requestId: string,
+  historyAccessHash: string,
+  db = getD1(),
+) {
   await ensureSourcingStorage(db);
   const request = await db.prepare(
     `SELECT id, status, execution_mode, vehicle, part, fitment_reference, budget_amount,
       currency, delivery_location, needed_by, country_code, locale, created_at, updated_at
-     FROM sourcing_requests WHERE id = ?`,
-  ).bind(requestId).first<RequestRow>();
+     FROM sourcing_requests WHERE id = ? AND history_access_hash = ?`,
+  ).bind(requestId, historyAccessHash).first<RequestRow>();
   if (!request) return null;
 
   const [{ results: suppliers }, { results: runs }, { results: quotes }] = await Promise.all([

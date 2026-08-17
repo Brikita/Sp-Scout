@@ -2,8 +2,8 @@ import type { D1Binding } from "./index";
 
 const initialized = new WeakMap<object, Promise<void>>();
 
-function initialize(db: D1Binding): Promise<void> {
-  return db.batch([
+async function initialize(db: D1Binding): Promise<void> {
+  await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS sourcing_requests (
       id TEXT PRIMARY KEY NOT NULL,
       status TEXT NOT NULL,
@@ -17,6 +17,7 @@ function initialize(db: D1Binding): Promise<void> {
       needed_by TEXT NOT NULL,
       country_code TEXT NOT NULL,
       locale TEXT NOT NULL,
+      history_access_hash TEXT,
       created_at TEXT NOT NULL,
       expires_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -86,8 +87,15 @@ function initialize(db: D1Binding): Promise<void> {
       received_at TEXT NOT NULL
     )`),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_webhook_events_provider_call_id ON webhook_events (provider_call_id)"),
-    db.prepare("PRAGMA optimize"),
-  ]).then(() => undefined);
+  ]);
+
+  const { results: requestColumns } = await db
+    .prepare("PRAGMA table_info(sourcing_requests)")
+    .all<{ name: string }>();
+  if (!requestColumns.some((column) => column.name === "history_access_hash")) {
+    await db.batch([db.prepare("ALTER TABLE sourcing_requests ADD COLUMN history_access_hash TEXT")]);
+  }
+  await db.batch([db.prepare("PRAGMA optimize")]);
 }
 
 export async function ensureSourcingStorage(db: D1Binding): Promise<void> {

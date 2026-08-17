@@ -15,6 +15,7 @@ export const sourcingRequests = sqliteTable(
     neededBy: text("needed_by").notNull(),
     countryCode: text("country_code").notNull(),
     locale: text("locale").notNull(),
+    historyAccessHash: text("history_access_hash"),
     createdAt: text("created_at").notNull(),
     expiresAt: text("expires_at").notNull(),
     updatedAt: text("updated_at").notNull(),
