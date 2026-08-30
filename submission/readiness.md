@@ -14,8 +14,8 @@ SpareScout is product-complete for a no-call judge walkthrough and has a real se
 | Automated verification | Ready | `npm run check` builds, renders, tests contracts, and lints the project. |
 | Durable pilot metrics | Infrastructure ready | Live-only calculations exclude fixtures. Populate them with the approved pilot; do not invent results. |
 | Public functional demo | Needs authorization | Current Sites deployment is private and owner-only. Publish a judge-accessible deployment after the user approves public release. |
-| Public source repository | Needs authorization | Local source is on `main`; publishing or changing repository visibility is an external action. |
-| Community contribution PR | Package ready | Use `submission/awesome-phone-call-agents/`, replace evidence placeholders, validate upstream, then open the public PR with authorization. |
+| Public source repository | Ready | `main` is publicly available at https://github.com/Brikita/Sp-Scout with no tracked runtime secrets. |
+| Community contribution PR | Open | The validated contribution is available at https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261. |
 | Demo video under three minutes | Script ready | Record `submission/demo-script.md` after the pilot so the video can show verified evidence. Upload publicly to YouTube or Vimeo. |
 | Devpost project copy | Draft ready | Replace every bracketed URL in `submission/devpost-draft.md` and include the public community PR URL. |
 | CALL-E account email | User-provided at submission | Enter it directly in Devpost; do not commit it to the repository. |
