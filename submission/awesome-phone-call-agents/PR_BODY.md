@@ -17,7 +17,9 @@ SpareScout turns several fitment and inventory conversations into comparable str
 - Live mode requires trusted server configuration and approval of the exact signed plan.
 - Calls gather quotes only; they cannot purchase, pay, or reserve.
 - Status recovery performs only an authenticated provider GET and cannot create a second call.
-- Samples contain fictional E.164 numbers and no credentials, transcripts, or personal data.
+- Every fixture uses NANPA's reserved, non-working 555-0100–0199 fictional range and returns before constructing a provider client.
+- Samples contain no credentials, recordings, transcripts, private phone numbers, or personal data.
+- Medical, legal, financial, and emergency advice are explicitly outside the workflow; urgent safety issues stop sourcing and route to appropriate local help.
 - The app creates no recurring jobs. Its current live-batch cancellation limitation is documented.
 
 ## Verification
