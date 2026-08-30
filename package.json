@@ -12,7 +12,7 @@
     "check": "npm test && npm run lint",
     "test": "npm run build && node --test tests/rendered-html.test.mjs && npm run test:contracts",
     "test:contracts": "node --experimental-strip-types --test tests/*.test.ts",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern work",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

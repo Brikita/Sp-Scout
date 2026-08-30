@@ -26,10 +26,15 @@ if (Test-Path -LiteralPath $target) {
 
 New-Item -ItemType Directory -Path $target | Out-Null
 
-$directories = @("app", "build", "db", "docs", "drizzle", "lib", "public", "tests", "worker")
+$directories = @("app", "build", "db", "docs", "drizzle", "lib", "public", "worker")
 foreach ($directory in $directories) {
   Copy-Item -LiteralPath (Join-Path $sourceRoot $directory) -Destination (Join-Path $target $directory) -Recurse
 }
+
+$targetTests = New-Item -ItemType Directory -Path (Join-Path $target "tests")
+Get-ChildItem -LiteralPath (Join-Path $sourceRoot "tests") -File |
+  Where-Object { $_.Name -ne "submission-package.test.ts" } |
+  Copy-Item -Destination $targetTests.FullName
 
 $files = @(
   ".env.example",

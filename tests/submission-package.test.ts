@@ -25,6 +25,7 @@ test("upstream contribution kit is safe, runnable, and free of private hosting m
   assert.match(pullRequestBody, /python3 scripts\/validate_repository\.py/);
   assert.match(prepareScript, /apps\\typescript\\sparescout/);
   assert.match(prepareScript, /"d1": "DB"/);
+  assert.match(prepareScript, /submission-package\.test\.ts/);
   assert.doesNotMatch(prepareScript, /project_id/);
 
   const permanentFiles = `${appReadme}\n${readmeEntry}\n${prepareScript}`;
