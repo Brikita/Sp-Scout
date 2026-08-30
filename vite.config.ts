@@ -34,6 +34,15 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async () => {
+  const isVercelBuild = Boolean(process.env.VERCEL || process.env.NITRO_PRESET === "vercel");
+
+  if (isVercelBuild) {
+    const { nitro } = await import("nitro/vite");
+    return {
+      plugins: [vinext(), nitro()],
+    };
+  }
+
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= "false";
