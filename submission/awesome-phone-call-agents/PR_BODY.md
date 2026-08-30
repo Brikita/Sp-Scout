@@ -36,7 +36,7 @@ python3 scripts/validate_repository.py
 
 ## Submission evidence to add before opening
 
-- Public demo: `[PUBLIC_DEMO_URL]`
+- Public demo: https://sp-scout.vercel.app
 - Public video under three minutes: `[YOUTUBE_OR_VIMEO_URL]`
 - Sanitized consenting-pilot note: `[PILOT_EVIDENCE_OR_NOT_YET_RUN]`
 

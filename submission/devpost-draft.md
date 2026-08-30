@@ -55,7 +55,7 @@ Phone automation needs more than a natural voice. The useful product is the cont
 
 ## Submission links
 
-- Functional demo: `[PUBLIC_DEPLOYMENT_URL]`
+- Functional demo: https://sp-scout.vercel.app
 - Source: https://github.com/Brikita/Sp-Scout
 - CALL-E community pull request: https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261
 - Demo video: `[YOUTUBE_OR_VIMEO_URL]`

@@ -13,7 +13,7 @@ SpareScout is product-complete for a no-call judge walkthrough and has a real se
 | Hosted live configuration | Ready | CALL-E CLI OAuth is usable, the trusted Sites runtime is configured, and the deployed no-call capability check reports live mode available. No secret values are committed. |
 | Automated verification | Ready | `npm run check` builds, renders, tests contracts, and lints the project. |
 | Durable pilot metrics | Infrastructure ready | Live-only calculations exclude fixtures. Populate them with the approved pilot; do not invent results. |
-| Public functional demo | Needs authorization | Current Sites deployment is private and owner-only. Publish a judge-accessible deployment after the user approves public release. |
+| Public functional demo | Ready | https://sp-scout.vercel.app returns 200 and completed a fixture-only plan, approval, and three-quote execution walkthrough. Live calling is disabled on the judge runtime. |
 | Public source repository | Ready | `main` is publicly available at https://github.com/Brikita/Sp-Scout with no tracked runtime secrets. |
 | Community contribution PR | Open | The validated contribution is available at https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261. |
 | Demo video under three minutes | Script ready | Record `submission/demo-script.md` after the pilot so the video can show verified evidence. Upload publicly to YouTube or Vimeo. |
@@ -24,9 +24,9 @@ SpareScout is product-complete for a no-call judge walkthrough and has a real se
 
 1. Provide one exact test window and consenting supplier set, review the resulting plan, then explicitly approve the real CALL-E pilot.
 2. Review the durable records and generated metrics; publish only sanitized evidence.
-3. Authorize a public judge-accessible deployment and public source repository.
+3. Recheck the public Vercel deployment after each release from `main`.
 4. Record and upload the sub-three-minute demo.
 5. Prepare and validate the upstream app contribution, then authorize the public pull request.
 6. Replace all Devpost placeholders, perform a fresh judge walkthrough, and submit before 14 September 2026 at 18:45 Africa/Nairobi.
 
-No live call, public deployment, repository publication, video upload, or pull request is performed by this checklist.
+No live call, video upload, or final Devpost submission is performed by this checklist.
