@@ -34,7 +34,7 @@ Also run the repository validator from the upstream root:
 python3 scripts/validate_repository.py
 ```
 
-## Submission evidence to add before opening
+## Submission evidence
 
 - Public demo: https://sp-scout.vercel.app
 - Public video under three minutes: `[YOUTUBE_OR_VIMEO_URL]`
@@ -49,5 +49,6 @@ python3 scripts/validate_repository.py
 - [x] No-call fixture path provided by default
 - [x] Install, usage, tests, and live opt-in documented
 - [x] Duplicate-call and interruption behavior documented
-- [ ] Replace the three submission-evidence placeholders above
-- [ ] Run upstream repository validation
+- [x] Public judge demo added
+- [x] Upstream repository validation passed
+- [ ] Add the public demo video and sanitized pilot note
