@@ -14,6 +14,7 @@ const controls = [
   ["Masked recipients", "The approval screen and public history show masked supplier numbers. Full numbers remain server-side for authorized execution."],
   ["Fail-closed live mode", "A fixture plan can never become live because configuration changes. Live execution requires both a live plan and trusted server credentials."],
   ["Traceable outcomes", "Requests, approvals, call runs, confidence, evidence, and normalized quotes are stored together for review."],
+  ["Professional boundaries", "SpareScout provides no medical, legal, or financial advice and is never an emergency service. Those topics stop the sourcing workflow and remain with qualified local services or professionals."],
 ] as const;
 
 export default function SafetyPage() {

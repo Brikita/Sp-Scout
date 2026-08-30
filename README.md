@@ -67,6 +67,8 @@ npm run dev
 
 Open `http://localhost:3000`. Fixture mode is the default and does not dial a number.
 
+Fixture recipients use only NANPA's reserved, non-working `555-0100`–`555-0199` fictional range. The same three numbers appear in every localized fixture because they are test data, not country-specific contacts, and fixture execution returns before the CALL-E client is constructed.
+
 Run all checks:
 
 ```bash
@@ -113,6 +115,10 @@ The plan endpoint rejects live requests with `503` before signing or persistence
 - The sourcing task cannot accept substitute parts or agree to commercial terms.
 - Selecting an offer does not contact a supplier; it only opens a separate reservation preview.
 - The public pilot page makes no performance claim until consenting live records exist.
+
+### Professional and emergency boundaries
+
+SpareScout is limited to vehicle-part quote collection. It does not provide medical, legal, or financial advice and must not be used for emergencies. If a conversation raises an urgent safety issue or asks for professional advice, the sourcing task must stop; the person should contact appropriate local emergency services or a qualified professional through their normal channels.
 
 See [`docs/call-e-integration.md`](docs/call-e-integration.md) for the implementation contract and [`submission/`](submission/) for the judge walkthrough, video script, and submission drafts.
 
