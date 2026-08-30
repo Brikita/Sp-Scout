@@ -1,14 +1,15 @@
 # Production activation handoff
 
-Last verified: 17 August 2026
+Last verified: 30 August 2026
 
 ## Current evidence
 
 - The local CALL-E CLI is authenticated and reports `usable: true`.
 - `plan_call`, `run_call`, and `get_call_run` are available.
-- The deployed Sites environment currently has no production runtime variables.
-- `GET /api/calls/capabilities` therefore reports `liveAvailable: false`.
-- A direct consented live-plan request returns `503` before signing or persistence, and the live-record count remains unchanged.
+- The private Sites production environment has the trusted live runtime variables configured; secret values remain server-only.
+- The validated site version was redeployed with environment revision 1.
+- `GET /api/calls/capabilities` reports `fixtureAvailable: true` and `liveAvailable: true`.
+- Before activation, a direct consented live-plan request returned `503` before signing or persistence, proving the unavailable-runtime safeguard.
 - No call was placed during these checks.
 
 CLI OAuth and the CALL-E Developer API key are separate credential surfaces. Do not copy the CLI token cache into the website runtime.
