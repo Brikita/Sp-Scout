@@ -117,3 +117,7 @@ See [`docs/call-e-integration.md`](docs/call-e-integration.md) for the implement
 ## Current evidence status
 
 The fixture workflow, official SDK request shape, approval verification, idempotency, status polling, supported markets, rendered routes, and pilot calculations are automated and passing. A consenting real-supplier pilot has not yet been run, so the evidence board intentionally shows no live performance values.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
