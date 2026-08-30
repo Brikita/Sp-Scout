@@ -1,6 +1,6 @@
-import { env } from "cloudflare:workers";
 import { calculateCalleCapabilities } from "../../../lib/calle/capabilities";
 import type { CalleRuntimeConfig } from "../../../lib/calle/server";
+import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 
 type RuntimeBindings = {
   CALLE_MODE?: string;
@@ -11,7 +11,7 @@ type RuntimeBindings = {
 };
 
 function bindings(): RuntimeBindings {
-  return env as unknown as RuntimeBindings;
+  return getRuntimeBindings() as RuntimeBindings;
 }
 
 export function getCalleRuntimeConfig(): CalleRuntimeConfig {

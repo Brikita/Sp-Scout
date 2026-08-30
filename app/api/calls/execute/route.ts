@@ -2,6 +2,7 @@ import { verifyApproval } from "../../../../lib/calle/approval";
 import { executeSourcingPlan } from "../../../../lib/calle/server";
 import { saveCallApproval, saveCallExecution } from "../../../../db/sourcing";
 import { getApprovalSecret, getCalleRuntimeConfig } from "../runtime";
+import { getOptionalD1 } from "../../../../db";
 
 export async function POST(request: Request) {
   try {
@@ -15,11 +16,19 @@ export async function POST(request: Request) {
 
     const config = getCalleRuntimeConfig();
     const plan = await verifyApproval(body.approvalToken, getApprovalSecret(config.mode));
-    await saveCallApproval(plan, body.approvalToken);
+    const database = getOptionalD1();
+    if (!database && plan.request.executionMode === "live") {
+      return Response.json({ error: "Live calling requires private persistent storage." }, { status: 503 });
+    }
+    if (database) await saveCallApproval(plan, body.approvalToken, database);
     const execution = await executeSourcingPlan(plan, body.approvalToken, config);
-    await saveCallExecution(plan, body.approvalToken, execution);
+    if (database) await saveCallExecution(plan, body.approvalToken, execution, database);
     return Response.json(
-      { execution, requestId: plan.id, historyUrl: `/api/sourcing/requests/${plan.id}` },
+      {
+        execution,
+        requestId: plan.id,
+        historyUrl: database ? `/api/sourcing/requests/${plan.id}` : undefined,
+      },
       { status: 202 },
     );
   } catch (error) {

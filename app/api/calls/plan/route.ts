@@ -3,6 +3,7 @@ import { createSourcingCallPlan, maskPhone, parseSourcingRequest } from "../../.
 import { savePlannedRequest } from "../../../../db/sourcing";
 import { createHistoryAccessCredential } from "../../../../lib/history-access";
 import { getApprovalSecret, getCalleCapabilities, getCalleRuntimeConfig } from "../runtime";
+import { getOptionalD1 } from "../../../../db";
 
 export async function POST(request: Request) {
   try {
@@ -17,7 +18,8 @@ export async function POST(request: Request) {
     const config = getCalleRuntimeConfig();
     const approvalToken = await signApproval(plan, getApprovalSecret(config.mode));
     const historyAccess = await createHistoryAccessCredential();
-    await savePlannedRequest(plan, historyAccess.hash);
+    const database = getOptionalD1();
+    if (database) await savePlannedRequest(plan, historyAccess.hash, database);
 
     return Response.json({
       mode: plan.request.executionMode === "fixture" ? "fixture" : config.mode,
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
         },
       },
       approvalToken,
-      historyAccess: { requestId: plan.id, token: historyAccess.token },
+      historyAccess: database ? { requestId: plan.id, token: historyAccess.token } : undefined,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create the call plan.";

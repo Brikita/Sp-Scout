@@ -1,9 +1,12 @@
 import { getPilotMetrics } from "../../../../db/pilot";
+import { getOptionalD1 } from "../../../../db";
+import { calculatePilotMetrics } from "../../../../lib/pilot-metrics";
 
 export async function GET() {
   try {
+    const database = getOptionalD1();
     return Response.json(
-      { metrics: await getPilotMetrics() },
+      { metrics: database ? await getPilotMetrics(database) : calculatePilotMetrics([], [], [], 0) },
       { headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
