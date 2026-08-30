@@ -13,7 +13,7 @@ import {
 } from "../lib/calle/contracts.ts";
 import { executeFixture } from "../lib/calle/fixtures.ts";
 import { executeSourcingPlan, getSourcingExecution } from "../lib/calle/server.ts";
-import { SUPPORTED_MARKETS, supportsMarketLocale } from "../lib/markets.ts";
+import { FICTIONAL_FIXTURE_PHONES, SUPPORTED_MARKETS, supportsMarketLocale } from "../lib/markets.ts";
 
 const request: SourcingRequest = {
   executionMode: "fixture",
@@ -103,6 +103,7 @@ test("defines a valid localized configuration for every supported CALL-E market"
     assert.equal(supportsMarketLocale(market.countryCode, market.defaultLocale), true);
     assert.equal(market.fixturePhones.length, 3);
     for (const phone of market.fixturePhones) assert.match(phone, /^\+[1-9]\d{7,14}$/);
+    assert.deepEqual(market.fixturePhones, FICTIONAL_FIXTURE_PHONES);
   }
 });
 
@@ -111,6 +112,7 @@ test("builds a disclosed, information-only call task", () => {
   assert.match(task, /disclose that you are an AI assistant/i);
   assert.match(task, /do not reserve, order, purchase, pay for, or commit/i);
   assert.match(task, /Do not accept a substitute part/i);
+  assert.match(task, /medical, legal, financial, or emergency advice/i);
   assert.match(task, /KES 8000/);
 });
 
@@ -164,6 +166,20 @@ test("returns deterministic structured fixture quotes without a call", () => {
   assert.equal(execution.quotes.length, 2);
   assert.equal(execution.quotes[0].result?.currency, "KES");
   assert.match(String(execution.quotes[0].evidence[0]), /NKE165-705K9/);
+});
+
+test("keeps reserved fixture recipients outside the provider adapter", async () => {
+  let providerRequested = false;
+  const execution = await executeSourcingPlan(createSourcingCallPlan(request), "fixture-plan-token", {
+    mode: "live",
+    apiKey: "calle_test_key",
+    fetch: async () => {
+      providerRequested = true;
+      throw new Error("Fixture execution must not reach the provider.");
+    },
+  });
+  assert.equal(execution.mode, "fixture");
+  assert.equal(providerRequested, false);
 });
 
 test("recognizes every terminal CALL-E state", () => {

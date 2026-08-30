@@ -177,6 +177,7 @@ export function buildCallTask(request: SourcingRequest): string {
     `The buyer's budget ceiling is ${request.currency} ${request.budgetAmount}. Do not negotiate beyond gathering the quoted terms.`,
     "Ask whether the item could be held after a separate confirmation, but do not reserve, order, purchase, pay for, or commit to anything.",
     "Do not accept a substitute part. Record unknown information as unknown instead of inferring it.",
+    "This workflow is only for vehicle-part sourcing. Do not provide or solicit medical, legal, financial, or emergency advice. If an urgent safety issue is raised, end the sourcing task and direct the person to appropriate local help.",
   ];
   if (request.executionMode === "live") {
     instructions.push(
