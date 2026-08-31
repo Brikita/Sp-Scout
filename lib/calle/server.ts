@@ -11,6 +11,21 @@ export type CalleRuntimeConfig = {
   fetch?: (request: Request) => Promise<Response>;
 };
 
+export const OFFICIAL_CALLE_ORIGIN = "https://api.heycall-e.com";
+
+export function safeCalleBaseUrl(baseUrl = OFFICIAL_CALLE_ORIGIN): string {
+  const url = new URL(baseUrl);
+  const loopback = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
+  const official = url.protocol === "https:" && url.origin === OFFICIAL_CALLE_ORIGIN;
+  if ((!loopback && !official) || url.username || url.password || url.search || url.hash) {
+    throw new Error("CALL-E credentials may only be sent to the official HTTPS API origin or a loopback test server.");
+  }
+  if (url.pathname !== "/" && url.pathname !== "") {
+    throw new Error("The CALL-E base URL must not contain a path.");
+  }
+  return url.origin;
+}
+
 export async function executeSourcingPlan(
   plan: SourcingCallPlan,
   approvalToken: string,
@@ -27,7 +42,7 @@ export async function executeSourcingPlan(
 
   const client = new CalleClient({
     apiKey: config.apiKey,
-    baseUrl: config.baseUrl ?? "https://api.heycall-e.com",
+    baseUrl: safeCalleBaseUrl(config.baseUrl),
     fetch: config.fetch,
   });
   const idempotencyKey = `sparescout_${await approvalFingerprint(approvalToken)}`;
@@ -59,7 +74,7 @@ export async function getSourcingExecution(
   }
   const client = new CalleClient({
     apiKey: config.apiKey,
-    baseUrl: config.baseUrl ?? "https://api.heycall-e.com",
+    baseUrl: safeCalleBaseUrl(config.baseUrl),
     fetch: config.fetch,
   });
   return normalizeCall(await client.calls.get(callId), suppliers);

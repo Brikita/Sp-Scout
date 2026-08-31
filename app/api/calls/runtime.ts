@@ -5,9 +5,10 @@ import { getRuntimeBindings } from "../../../lib/runtime-bindings";
 type RuntimeBindings = {
   CALLE_MODE?: string;
   CALLE_API_KEY?: string;
-  CALLE_BASE_URL?: string;
   CALLE_WEBHOOK_URL?: string;
   SPARESCOUT_APPROVAL_SECRET?: string;
+  SPARESCOUT_OPERATOR_TOKEN?: string;
+  SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST?: string;
 };
 
 function bindings(): RuntimeBindings {
@@ -19,8 +20,15 @@ export function getCalleRuntimeConfig(): CalleRuntimeConfig {
   return {
     mode: runtime.CALLE_MODE === "live" ? "live" : "fixture",
     apiKey: runtime.CALLE_API_KEY,
-    baseUrl: runtime.CALLE_BASE_URL,
     webhookUrl: runtime.CALLE_WEBHOOK_URL,
+  };
+}
+
+export function getLiveSecurityBindings() {
+  const runtime = bindings();
+  return {
+    SPARESCOUT_OPERATOR_TOKEN: runtime.SPARESCOUT_OPERATOR_TOKEN,
+    SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST: runtime.SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST,
   };
 }
 

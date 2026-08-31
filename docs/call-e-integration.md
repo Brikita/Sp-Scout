@@ -24,23 +24,27 @@ The task must:
 
 Strict JSON schemas define the aggregate counts and every supplier result.
 
-### 3. Save and sign the plan
+### 3. Authenticate, authorize, save, and sign the plan
 
-`POST /api/calls/plan` stores the request and supplier targets in D1, masks phone numbers in its response, and signs the complete plan with HMAC-SHA256. The token expires after 15 minutes. Editing any signed field invalidates the signature.
+For live mode, `POST /api/calls/plan` first requires a high-entropy operator bearer credential and checks every submitted phone against the exact server-side recipient allowlist. A consent checkbox alone grants no authority. The route then stores the authoritative request and supplier targets in D1.
+
+The signed browser approval expires after 15 minutes and replaces every supplier phone with `[server-held]` before encoding. The browser therefore cannot recover full numbers from the approval data. Editing any signed field invalidates the signature.
 
 No external call starts in this step.
 
 ### 4. Record approval before execution
 
-`POST /api/calls/execute` requires `approved: true` and a valid token. The approval record is written before the provider request so an uncertain network outcome still has an audit trail.
+`POST /api/calls/execute` requires `approved: true` and a valid approval. For live mode it independently authenticates the operator, reloads the authoritative plan from D1, and repeats the server allowlist check before recording approval. The approval record is written before the provider request so an uncertain network outcome still has an audit trail.
 
 ### 5. Execute exactly once
 
-Fixture plans always use the local fixture adapter, even if the server later switches to live mode. Live plans require `CALLE_MODE=live`, `CALLE_API_KEY`, a production approval secret, direct-recipient consent, and an authorized calling window. The consent fields are signed into the plan, persisted with the request, and checked again immediately before SDK execution.
+Fixture plans always use the local fixture adapter, even if the server later switches to live mode. Live plans require `CALLE_MODE=live`, `CALLE_API_KEY`, a production approval secret, operator authentication, an exact recipient allowlist, direct-recipient consent, and an authorized calling window. Consent is persisted with the server-held request and checked again immediately before SDK execution.
 
-The browser reads `GET /api/calls/capabilities` before enabling its live-pilot selector. That endpoint requires all three trusted live bindings; partial configuration remains fixture-only. This presentation gate supplements the server-side execution checks rather than replacing them.
+The browser reads `GET /api/calls/capabilities` before enabling its live-pilot selector. That endpoint requires every trusted live binding, including the operator token and a non-empty valid recipient allowlist; partial configuration remains fixture-only. This presentation gate supplements the endpoint authentication and authorization checks rather than replacing them.
 
-The plan route applies the same capability check before signing or saving a live request. An unconfigured deployment therefore cannot be used through a direct API request to persist real supplier targets, even though fixture planning remains available.
+The plan route applies the same capability check before signing or saving a live request. An unauthenticated or unauthorized direct API request therefore cannot persist real supplier targets, even though fixture planning remains available.
+
+The server does not accept a production `CALLE_BASE_URL` override. Credential-bearing SDK traffic is pinned to the official HTTPS CALL-E origin; only loopback hosts are accepted by the adapter for isolated fake-server tests.
 
 The CALL-E idempotency key is derived from the approval fingerprint. Retrying the same authorized plan therefore targets the same provider task instead of creating another batch.
 
@@ -85,6 +89,6 @@ D1 stores sourcing requests, supplier targets, call approvals, call runs, suppli
 
 ## Verification boundary
 
-The automated suite proves validation, signature tamper/expiry rejection, safe fixture behavior, real SDK request construction, idempotency headers, read-only polling, supported-market configuration, page rendering, and denominator-honest pilot calculations.
+The automated suite proves validation, operator authentication, exact-recipient authorization, phone-free browser approvals, signature tamper/expiry rejection, official-origin pinning, safe fixture behavior, real SDK request construction, idempotency headers, read-only polling, supported-market configuration, page rendering, and denominator-honest pilot calculations.
 
 It does not prove live call audio, supplier consent, real-world fitment accuracy, or pilot impact. Those require the separately approved consenting pilot.

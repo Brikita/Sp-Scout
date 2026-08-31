@@ -20,7 +20,14 @@ async function keyFor(secret: string) {
 
 export async function signApproval(plan: SourcingCallPlan, secret: string): Promise<string> {
   if (secret.length < 24) throw new Error("The approval secret must be at least 24 characters.");
-  const payload = toBase64Url(encoder.encode(JSON.stringify(plan)));
+  const browserSafePlan: SourcingCallPlan = {
+    ...plan,
+    request: {
+      ...plan.request,
+      suppliers: plan.request.suppliers.map((supplier) => ({ ...supplier, phone: "[server-held]" })),
+    },
+  };
+  const payload = toBase64Url(encoder.encode(JSON.stringify(browserSafePlan)));
   const signature = await crypto.subtle.sign("HMAC", await keyFor(secret), encoder.encode(payload));
   return `${payload}.${toBase64Url(new Uint8Array(signature))}`;
 }

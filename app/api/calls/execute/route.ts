@@ -1,7 +1,8 @@
 import { verifyApproval } from "../../../../lib/calle/approval";
 import { executeSourcingPlan } from "../../../../lib/calle/server";
-import { saveCallApproval, saveCallExecution } from "../../../../db/sourcing";
-import { getApprovalSecret, getCalleRuntimeConfig } from "../runtime";
+import { getStoredSourcingCallPlan, saveCallApproval, saveCallExecution } from "../../../../db/sourcing";
+import { assertAuthorizedLiveRecipients, isAuthorizedLiveOperator } from "../../../../lib/live-security";
+import { getApprovalSecret, getCalleRuntimeConfig, getLiveSecurityBindings } from "../runtime";
 import { getOptionalD1 } from "../../../../db";
 
 export async function POST(request: Request) {
@@ -15,8 +16,27 @@ export async function POST(request: Request) {
     }
 
     const config = getCalleRuntimeConfig();
-    const plan = await verifyApproval(body.approvalToken, getApprovalSecret(config.mode));
+    const browserSafePlan = await verifyApproval(body.approvalToken, getApprovalSecret(config.mode));
     const database = getOptionalD1();
+    let plan = browserSafePlan;
+    if (browserSafePlan.request.executionMode === "live") {
+      const liveSecurity = getLiveSecurityBindings();
+      if (!await isAuthorizedLiveOperator(request.headers.get("authorization"), liveSecurity)) {
+        return Response.json(
+          { error: "Valid operator authentication is required for live execution." },
+          { status: 401, headers: { "www-authenticate": "Bearer" } },
+        );
+      }
+      if (!database) {
+        return Response.json({ error: "Live calling requires private persistent storage." }, { status: 503 });
+      }
+      const storedPlan = await getStoredSourcingCallPlan(browserSafePlan.id, database);
+      if (!storedPlan || storedPlan.request.executionMode !== "live") {
+        return Response.json({ error: "The approved live plan is unavailable." }, { status: 409 });
+      }
+      assertAuthorizedLiveRecipients(storedPlan.request.suppliers, liveSecurity);
+      plan = storedPlan;
+    }
     if (!database && plan.request.executionMode === "live") {
       return Response.json({ error: "Live calling requires private persistent storage." }, { status: 503 });
     }

@@ -14,7 +14,7 @@ Switch between two supported markets so currency, language, location, budget, an
 
 ## 0:38–0:58 — Approval boundary
 
-Open the plan. Point out AI disclosure, masked numbers, the exact questions, the 15-minute signed plan, and the ban on purchases or reservations.
+Open the plan. Point out operator authentication, server-allowlisted recipients, AI disclosure, masked numbers, the exact questions, the 15-minute approval, and the ban on purchases or reservations. Never show the operator credential or deployment allowlist.
 
 ## 0:58–1:28 — CALL-E execution
 

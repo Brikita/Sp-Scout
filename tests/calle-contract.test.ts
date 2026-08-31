@@ -12,7 +12,12 @@ import {
   type SourcingRequest,
 } from "../lib/calle/contracts.ts";
 import { executeFixture } from "../lib/calle/fixtures.ts";
-import { executeSourcingPlan, getSourcingExecution } from "../lib/calle/server.ts";
+import { executeSourcingPlan, getSourcingExecution, safeCalleBaseUrl } from "../lib/calle/server.ts";
+import {
+  assertAuthorizedLiveRecipients,
+  isAuthorizedLiveOperator,
+  liveRecipientAllowlist,
+} from "../lib/live-security.ts";
 import { FICTIONAL_FIXTURE_PHONES, SUPPORTED_MARKETS, supportsMarketLocale } from "../lib/markets.ts";
 
 const request: SourcingRequest = {
@@ -29,8 +34,8 @@ const request: SourcingRequest = {
   countryCode: "KE",
   locale: "en-KE",
   suppliers: [
-    { id: "supplier-1", name: "Example Auto One", phone: "+254700000001" },
-    { id: "supplier-2", name: "Example Auto Two", phone: "+254700000002" },
+    { id: "supplier-1", name: "Example Auto One", phone: FICTIONAL_FIXTURE_PHONES[0] },
+    { id: "supplier-2", name: "Example Auto Two", phone: FICTIONAL_FIXTURE_PHONES[1] },
   ],
 };
 
@@ -57,10 +62,35 @@ test("validates global sourcing inputs and E.164 suppliers", () => {
 });
 
 test("exposes live calling only when every trusted runtime binding is present", () => {
+  const liveSecurity = {
+    SPARESCOUT_OPERATOR_TOKEN: "o".repeat(43),
+    SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST: FICTIONAL_FIXTURE_PHONES.join(","),
+  };
   assert.deepEqual(calculateCalleCapabilities({}), { fixtureAvailable: true, liveAvailable: false });
   assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key" }).liveAvailable, false);
   assert.equal(calculateCalleCapabilities({ CALLE_MODE: "fixture", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, false);
-  assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, true);
+  assert.equal(calculateCalleCapabilities({ CALLE_MODE: "live", CALLE_API_KEY: "calle_test_key", SPARESCOUT_APPROVAL_SECRET: "test-secret" }).liveAvailable, false);
+  assert.equal(calculateCalleCapabilities({
+    CALLE_MODE: "live",
+    CALLE_API_KEY: "calle_test_key",
+    SPARESCOUT_APPROVAL_SECRET: "test-secret",
+    ...liveSecurity,
+  }).liveAvailable, true);
+});
+
+test("requires operator authentication and an exact server-side live recipient allowlist", async () => {
+  const bindings = {
+    SPARESCOUT_OPERATOR_TOKEN: "operator-secret-with-at-least-32-characters",
+    SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST: FICTIONAL_FIXTURE_PHONES.join(","),
+  };
+  assert.equal(await isAuthorizedLiveOperator(`Bearer ${bindings.SPARESCOUT_OPERATOR_TOKEN}`, bindings), true);
+  assert.equal(await isAuthorizedLiveOperator("Bearer wrong-token-with-at-least-32-characters", bindings), false);
+  assert.equal(liveRecipientAllowlist(bindings.SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST).size, 3);
+  assert.doesNotThrow(() => assertAuthorizedLiveRecipients(request.suppliers, bindings));
+  assert.throws(
+    () => assertAuthorizedLiveRecipients([{ ...request.suppliers[0], phone: "+12025550199" }], bindings),
+    /pre-authorized/i,
+  );
 });
 
 test("issues separate high-entropy credentials for private durable history", async () => {
@@ -151,12 +181,23 @@ test("requires an untampered, unexpired approval", async () => {
   const plan = createSourcingCallPlan(request, now);
   const secret = "a-long-test-secret-for-sparescout";
   const token = await signApproval(plan, secret);
-  assert.equal((await verifyApproval(token, secret, now)).id, plan.id);
+  const verified = await verifyApproval(token, secret, now);
+  assert.equal(verified.id, plan.id);
+  assert.equal(verified.request.suppliers[0].phone, "[server-held]");
+  assert.equal(token.includes(request.suppliers[0].phone), false);
   await assert.rejects(() => verifyApproval(`${token}x`, secret, now), /invalid/);
   await assert.rejects(
     () => verifyApproval(token, secret, new Date("2026-08-17T08:16:00.000Z")),
     /expired/,
   );
+});
+
+test("restricts credential-bearing CALL-E requests to the official origin or loopback", () => {
+  assert.equal(safeCalleBaseUrl(), "https://api.heycall-e.com");
+  assert.equal(safeCalleBaseUrl("http://127.0.0.1:8787"), "http://127.0.0.1:8787");
+  assert.throws(() => safeCalleBaseUrl("https://attacker.example"), /official HTTPS API origin/i);
+  assert.throws(() => safeCalleBaseUrl("https://api.heycall-e.com.evil.example"), /official HTTPS API origin/i);
+  assert.throws(() => safeCalleBaseUrl("https://api.heycall-e.com/proxy"), /must not contain a path/i);
 });
 
 test("returns deterministic structured fixture quotes without a call", () => {

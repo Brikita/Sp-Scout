@@ -142,6 +142,7 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionMode, setExecutionMode] = useState<"fixture" | "live">("fixture");
+  const [operatorToken, setOperatorToken] = useState("");
   const [recipientConsentConfirmed, setRecipientConsentConfirmed] = useState(false);
   const [authorizedCallWindow, setAuthorizedCallWindow] = useState("");
   const [liveAvailable, setLiveAvailable] = useState(false);
@@ -217,7 +218,10 @@ export default function Home() {
     try {
       const response = await fetch("/api/calls/plan", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(executionMode === "live" ? { authorization: `Bearer ${operatorToken}` } : {}),
+        },
         body: JSON.stringify({
           executionMode,
           recipientConsentConfirmed: executionMode === "live" && recipientConsentConfirmed,
@@ -295,7 +299,10 @@ export default function Home() {
     setIsExecuting(true);
     const executionRequest = fetch("/api/calls/execute", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(executionMode === "live" ? { authorization: `Bearer ${operatorToken}` } : {}),
+      },
       body: JSON.stringify({ approvalToken, approved: true }),
     });
     try {
@@ -339,6 +346,7 @@ export default function Home() {
     setExecution(null);
     setRequestError(null);
     setIsExecuting(false);
+    setOperatorToken("");
   };
 
   return (
@@ -440,12 +448,25 @@ export default function Home() {
               {executionMode === "live" && (
                 <fieldset className="supplier-editor field-wide">
                   <legend>Authorized supplier contacts</legend>
-                  <p>Enter business numbers that are authorized for this pilot. E.164 format is required.</p>
+                  <p>Live access requires a private operator credential, direct consent, and numbers pre-approved in the server allowlist.</p>
+                  <label className="field">
+                    <span>Operator access token</span>
+                    <input
+                      type="password"
+                      value={operatorToken}
+                      onChange={(event) => setOperatorToken(event.target.value)}
+                      autoComplete="off"
+                      minLength={32}
+                      placeholder="Private deployment credential"
+                      required
+                    />
+                    <small>Used only for these live requests; never saved to browser history.</small>
+                  </label>
                   {liveSuppliers.map((supplier, index) => (
                     <div className="supplier-editor-row" key={supplier.id}>
                       <label><span>Supplier {index + 1}</span><input value={supplier.name} onChange={(event) => updateLiveSupplier(index, "name", event.target.value)} placeholder="Business name" required /></label>
                       <label><span>Area</span><input value={supplier.area} onChange={(event) => updateLiveSupplier(index, "area", event.target.value)} placeholder="City or district" required /></label>
-                      <label><span>E.164 phone</span><input type="tel" value={supplier.phone} onChange={(event) => updateLiveSupplier(index, "phone", event.target.value)} placeholder="+15551234567" pattern="\+[1-9][0-9]{7,14}" required /></label>
+                      <label><span>E.164 phone</span><input type="tel" value={supplier.phone} onChange={(event) => updateLiveSupplier(index, "phone", event.target.value)} placeholder="+12025550101" pattern="\+[1-9][0-9]{7,14}" required /></label>
                     </div>
                   ))}
                   <div className="consent-panel">
@@ -515,7 +536,7 @@ export default function Home() {
               {executionMode === "live" && (
                 <div className="consent-review">
                   <span aria-hidden="true">✓</span>
-                  <p><strong>Recipient consent attested</strong>Authorized window: {authorizedCallWindow}</p>
+                  <p><strong>Operator authenticated · recipients allowlisted</strong>Consent attested for: {authorizedCallWindow}</p>
                 </div>
               )}
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>

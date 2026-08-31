@@ -23,7 +23,7 @@ SpareScout makes that phone work inspectable:
 
 ```mermaid
 flowchart LR
-  A["Localized part request"] --> B["Signed call-plan preview"]
+  A["Localized part request"] --> B["Authenticated, masked call-plan preview"]
   B --> C["Explicit approval"]
   C --> D["CALL-E supplier batch"]
   D --> E["Durable status monitoring"]
@@ -36,11 +36,11 @@ flowchart LR
 - Official `@call-e/calle` server SDK integration.
 - Strict aggregate and per-supplier JSON result schemas.
 - AI identity disclosure and information-only call instructions.
-- Signed, 15-minute approval tokens bound to the complete plan.
-- Server-enforced direct-consent attestation and an authorized calling window for every live plan.
+- Signed, 15-minute browser approval data with every supplier phone removed; live execution reloads the authoritative plan from private D1 storage.
+- Server-enforced operator authentication, exact recipient allowlisting, direct-consent attestation, and an authorized calling window for every live plan.
 - Provider idempotency derived from the approved plan.
 - Safe fixture execution that cannot become live through a configuration change.
-- A live-pilot selector that stays disabled until the trusted server confirms mode, API key, and approval secret are all configured.
+- A live-pilot selector that stays disabled until the trusted server confirms mode, API key, approval secret, operator credential, and at least one allowlisted recipient are configured.
 - Durable D1 requests, suppliers, approvals, call runs, quotes, and evidence.
 - A user-facing sourcing ledger protected by a separate random per-request history credential; only its SHA-256 hash is stored server-side.
 - Credential-protected permanent deletion and a 30-day sourcing-record retention sweep.
@@ -83,15 +83,18 @@ Copy `.env.example` into the trusted runtime configuration. Never expose these v
 | --- | --- |
 | `CALLE_MODE` | `fixture` by default; only `live` enables the live adapter. |
 | `CALLE_API_KEY` | CALL-E server API credential required for live execution and polling. |
-| `CALLE_BASE_URL` | Optional CALL-E API base URL override. |
 | `CALLE_WEBHOOK_URL` | Optional terminal webhook destination passed to CALL-E. |
 | `SPARESCOUT_APPROVAL_SECRET` | HMAC secret for signed live approval tokens. |
+| `SPARESCOUT_OPERATOR_TOKEN` | High-entropy bearer credential required on both live planning and execution. |
+| `SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST` | Comma-separated E.164 recipients whose ownership/consent was verified outside the public app. |
 
-`CALLE_MODE=live` is not sufficient by itself. A request must also have been planned as `executionMode: "live"`, carry a valid unexpired signature, and be submitted with `approved: true`.
+`CALLE_MODE=live` is not sufficient by itself. Both live endpoints require the private operator bearer credential, every submitted recipient must exactly match the server allowlist, and execution must carry a valid unexpired approval with `approved: true`.
 
 Live planning also requires `recipientConsentConfirmed: true` and a non-empty `authorizedCallWindow`. Both values are signed into the plan, saved with the durable request, shown during final review, and checked again immediately before the CALL-E SDK can create a batch.
 
-The plan endpoint rejects live requests with `503` before signing or persistence when any trusted live binding is missing. UI availability is therefore only a presentation layer; direct API requests fail closed as well.
+The plan endpoint rejects live requests before persistence when trusted configuration, operator authentication, or recipient authorization is missing. The execute endpoint independently repeats authentication and allowlist checks against the server-held plan. UI availability is therefore only a presentation layer; direct API requests fail closed as well.
+
+Credential-bearing CALL-E requests are pinned to `https://api.heycall-e.com`. Runtime origin overrides are not accepted; only explicit loopback URLs are permitted in isolated tests.
 
 ## Key routes
 
@@ -108,7 +111,7 @@ The plan endpoint rejects live requests with `503` before signing or persistence
 ## Data and safety boundary
 
 - Full supplier numbers stay server-side and are only used for an approved execution.
-- Browser-visible plans and history use masked numbers.
+- Browser-visible plans and history use masked numbers, and the signed browser approval data contains no phone values.
 - The browser remembers history credentials for up to 20 requests; it is not the source of truth for the durable D1 records.
 - A matching history credential can permanently delete its durable record. Remaining sourcing data is pruned after 30 days when database activity resumes.
 - CALL-E summaries, transcripts, and structured values are treated as untrusted external data.

@@ -23,7 +23,8 @@ The public path is a safe no-call fixture. The trusted backend implements the re
 - React 19, TypeScript, vinext, Vite, and a Cloudflare Workers-compatible runtime.
 - Official `@call-e/calle` server SDK for batch call creation and result retrieval.
 - Strict JSON schemas for aggregate and per-recipient results.
-- HMAC-signed, expiring approval plans.
+- Authenticated live planning, server-side recipient allowlisting, and expiring browser approval data with phone values removed.
+- Official CALL-E origin pinning for every credential-bearing SDK request.
 - D1 persistence for requests, recipients, approvals, runs, evidence, and quotes.
 - Seventeen supported CALL-E regions with market-aware language and currency.
 - Automated pilot metrics that include only durable live records and exclude every fixture.

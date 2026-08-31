@@ -25,11 +25,15 @@ test("upstream contribution kit is safe, runnable, and free of private hosting m
   assert.match(pullRequestBody, /python3 scripts\/validate_repository\.py/);
   assert.match(prepareScript, /apps\\typescript\\sparescout/);
   assert.match(prepareScript, /"d1": "DB"/);
+  assert.match(prepareScript, /"sites-vite-plugin\.ts"/);
   assert.match(prepareScript, /submission-package\.test\.ts/);
   assert.doesNotMatch(prepareScript, /project_id/);
 
   const permanentFiles = `${appReadme}\n${readmeEntry}\n${prepareScript}`;
   assert.doesNotMatch(permanentFiles, /codex\//i);
   assert.doesNotMatch(permanentFiles, /appgprj_[a-z0-9]+/i);
-  assert.doesNotMatch(permanentFiles, /(?:CALLE_API_KEY|SPARESCOUT_APPROVAL_SECRET)\s*=\s*[^<\s]/);
+  assert.doesNotMatch(
+    permanentFiles,
+    /(?:CALLE_API_KEY|SPARESCOUT_APPROVAL_SECRET|SPARESCOUT_OPERATOR_TOKEN|SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST)\s*=\s*[^<\s]/,
+  );
 });

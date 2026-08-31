@@ -7,12 +7,13 @@ export const metadata: Metadata = {
 };
 
 const controls = [
-  ["Direct consent", "A live plan is rejected unless the operator attests that every listed business consented and records the authorized calling window."],
-  ["Explicit approval", "A reviewed plan must carry a valid, untampered approval token before execution."],
+  ["Authenticated operator", "Both live endpoints require a private operator credential. A consent checkbox alone never authorizes a call."],
+  ["Authorized recipients", "Every live number must exactly match the server-side allowlist and carry a documented consent window."],
+  ["Explicit approval", "Browser approval data is time-limited and contains no phone values; execution reloads the authoritative plan privately."],
   ["AI disclosure", "The call task instructs SpareScout to identify itself as an AI assistant collecting a quote for a buyer."],
   ["Information only", "Calls may ask about price, stock, fitment, delivery, and whether a later hold is possible. They cannot reserve, order, pay, purchase, or commit."],
-  ["Masked recipients", "The approval screen and public history show masked supplier numbers. Full numbers remain server-side for authorized execution."],
-  ["Fail-closed live mode", "A fixture plan can never become live because configuration changes. Live execution requires both a live plan and trusted server credentials."],
+  ["Masked recipients", "The approval screen, browser token, and public history expose no full supplier number. Full numbers remain server-side for authorized execution."],
+  ["Fail-closed live mode", "A fixture plan can never become live because configuration changes. Live execution requires a live plan, operator authentication, an allowlist match, and trusted server credentials."],
   ["Traceable outcomes", "Requests, approvals, call runs, confidence, evidence, and normalized quotes are stored together for review."],
   ["Professional boundaries", "SpareScout provides no medical, legal, or financial advice and is never an emergency service. Those topics stop the sourcing workflow and remain with qualified local services or professionals."],
 ] as const;

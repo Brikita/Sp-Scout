@@ -52,12 +52,17 @@ test("server-renders every public product page with shared navigation", async ()
   }
 });
 
-test("keeps real-world side effects behind explicit approval", async () => {
-  const [page, layout, packageJson, planRoute, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
+test("keeps real-world side effects behind authenticated, recipient-bound approval", async () => {
+  const [page, layout, packageJson, planRoute, executeRoute, runtime, liveSecurity, approval, provider, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../app/api/calls/plan/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/calls/execute/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/calls/runtime.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/live-security.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/calle/approval.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/calle/server.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/sourcing/requests/[id]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/calls/status/[requestId]/[callId]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/history/history-ledger.tsx", import.meta.url), "utf8"),
@@ -75,6 +80,17 @@ test("keeps real-world side effects behind explicit approval", async () => {
   assert.match(planRoute, /input\.executionMode === "live" && !getCalleCapabilities\(\)\.liveAvailable/);
   assert.match(planRoute, /status: 503/);
   assert.ok(planRoute.indexOf("getCalleCapabilities().liveAvailable") < planRoute.indexOf("await savePlannedRequest("));
+  assert.match(planRoute, /isAuthorizedLiveOperator/);
+  assert.match(planRoute, /assertAuthorizedLiveRecipients/);
+  assert.match(executeRoute, /isAuthorizedLiveOperator/);
+  assert.match(executeRoute, /getStoredSourcingCallPlan/);
+  assert.match(executeRoute, /assertAuthorizedLiveRecipients/);
+  assert.match(liveSecurity, /SPARESCOUT_OPERATOR_TOKEN/);
+  assert.match(liveSecurity, /SPARESCOUT_LIVE_RECIPIENT_ALLOWLIST/);
+  assert.match(approval, /phone: "\[server-held\]"/);
+  assert.doesNotMatch(runtime, /CALLE_BASE_URL/);
+  assert.match(provider, /OFFICIAL_CALLE_ORIGIN = "https:\/\/api\.heycall-e\.com"/);
+  assert.match(provider, /safeCalleBaseUrl/);
   assert.match(historyRoute, /authorization/);
   assert.match(historyRoute, /hashHistoryAccessToken/);
   assert.match(statusRoute, /authorization/);

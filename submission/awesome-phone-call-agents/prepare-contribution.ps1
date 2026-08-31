@@ -26,7 +26,7 @@ if (Test-Path -LiteralPath $target) {
 
 New-Item -ItemType Directory -Path $target | Out-Null
 
-$directories = @("app", "build", "db", "docs", "drizzle", "lib", "public", "worker")
+$directories = @("app", "db", "docs", "drizzle", "lib", "public", "worker")
 foreach ($directory in $directories) {
   Copy-Item -LiteralPath (Join-Path $sourceRoot $directory) -Destination (Join-Path $target $directory) -Recurse
 }
@@ -46,6 +46,7 @@ $files = @(
   "package-lock.json",
   "package.json",
   "postcss.config.mjs",
+  "sites-vite-plugin.ts",
   "tsconfig.json",
   "vite.config.ts"
 )

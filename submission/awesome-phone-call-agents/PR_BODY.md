@@ -2,7 +2,7 @@
 
 Adds SpareScout, a TypeScript reference app for approval-gated multi-supplier vehicle-part sourcing with CALL-E.
 
-SpareScout turns several fitment and inventory conversations into comparable structured quotes while keeping every consequential side effect human-owned. It includes a no-call fixture default, masked call-plan review, signed approval, provider idempotency, durable D1 history, credential-protected GET-only recovery, supported-market localization, and denominator-honest pilot metrics.
+SpareScout turns several fitment and inventory conversations into comparable structured quotes while keeping every consequential side effect human-owned. It includes a no-call fixture default, authenticated live planning, a private recipient allowlist, phone-free browser approvals, provider-origin pinning, provider idempotency, durable D1 history, credential-protected GET-only recovery, supported-market localization, and denominator-honest pilot metrics.
 
 ## Why this belongs in the repository
 

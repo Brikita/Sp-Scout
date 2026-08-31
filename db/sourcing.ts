@@ -1,7 +1,15 @@
 import { getD1, type D1Binding, type D1Statement } from "./index";
 import { ensureSourcingStorage } from "./init";
 import { approvalFingerprint } from "../lib/calle/approval";
-import { maskPhone, type SourcingCallPlan, type SourcingExecution } from "../lib/calle/contracts";
+import {
+  buildAggregateResultSchema,
+  buildCallTask,
+  buildRecipientResultSchema,
+  maskPhone,
+  type SourcingCallPlan,
+  type SourcingExecution,
+  type SourcingRequest,
+} from "../lib/calle/contracts";
 import { sourcingRetentionCutoff } from "../lib/retention";
 
 const retentionSweepTimes = new WeakMap<object, number>();
@@ -107,6 +115,81 @@ export async function savePlannedRequest(
     ),
   ];
   await db.batch(statements);
+}
+
+type StoredPlanRequestRow = {
+  id: string;
+  execution_mode: "fixture" | "live";
+  vehicle: string;
+  part: string;
+  fitment_reference: string;
+  budget_amount: number;
+  currency: string;
+  delivery_location: string;
+  needed_by: string;
+  country_code: string;
+  locale: string;
+  recipient_consent_confirmed: number;
+  authorized_call_window: string;
+  created_at: string;
+  expires_at: string;
+};
+
+type StoredPlanSupplierRow = {
+  supplier_id: string;
+  name: string;
+  phone_e164: string;
+  area: string | null;
+};
+
+export async function getStoredSourcingCallPlan(
+  requestId: string,
+  db = getD1(),
+): Promise<SourcingCallPlan | null> {
+  await ensureSourcingStorage(db);
+  const requestRow = await db.prepare(
+    `SELECT id, execution_mode, vehicle, part, fitment_reference, budget_amount,
+      currency, delivery_location, needed_by, country_code, locale,
+      recipient_consent_confirmed, authorized_call_window, created_at, expires_at
+     FROM sourcing_requests WHERE id = ?`,
+  ).bind(requestId).first<StoredPlanRequestRow>();
+  if (!requestRow) return null;
+
+  const { results: supplierRows } = await db.prepare(
+    `SELECT supplier_id, name, phone_e164, area
+     FROM request_suppliers WHERE request_id = ? ORDER BY created_at, supplier_id`,
+  ).bind(requestId).all<StoredPlanSupplierRow>();
+  if (!supplierRows.length) return null;
+
+  const request: SourcingRequest = {
+    executionMode: requestRow.execution_mode,
+    recipientConsentConfirmed: Boolean(requestRow.recipient_consent_confirmed),
+    authorizedCallWindow: requestRow.authorized_call_window,
+    vehicle: requestRow.vehicle,
+    part: requestRow.part,
+    fitmentReference: requestRow.fitment_reference,
+    budgetAmount: requestRow.budget_amount,
+    currency: requestRow.currency,
+    deliveryLocation: requestRow.delivery_location,
+    neededBy: requestRow.needed_by,
+    countryCode: requestRow.country_code,
+    locale: requestRow.locale,
+    suppliers: supplierRows.map((supplier) => ({
+      id: supplier.supplier_id,
+      name: supplier.name,
+      phone: supplier.phone_e164,
+      area: supplier.area ?? undefined,
+    })),
+  };
+  return {
+    id: requestRow.id,
+    createdAt: requestRow.created_at,
+    expiresAt: requestRow.expires_at,
+    request,
+    task: buildCallTask(request),
+    aggregateResultSchema: buildAggregateResultSchema(),
+    recipientResultSchema: buildRecipientResultSchema(request.currency),
+  };
 }
 
 export async function saveCallApproval(
