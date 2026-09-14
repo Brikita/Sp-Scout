@@ -54,13 +54,13 @@ flowchart LR
 - Credential-protected permanent deletion and a 30-day sourcing-record retention sweep.
 - Credential-protected, read-only live status polling that cannot start another call and resumes from Request History after a browser interruption.
 - Masked supplier numbers in plans and history responses.
-- Seventeen current CALL-E recipient regions with market-specific language, currency, delivery, budget, and fixture configuration.
+- Seventeen localized demo markets with market-specific language, currency, delivery, budget, and fixture configuration. Live calling remains separately gated by current provider coverage; Kenya/English is fixture-only at present.
 - About, workflow, markets, safety, privacy, and pilot-evidence pages.
 - Pilot metrics calculated only from durable live records, with all fixture runs excluded.
 
 ## Supported markets
 
-SpareScout exposes the current CALL-E recipient regions: United States, Singapore, Malaysia, India, United Arab Emirates, Australia, Canada, United Kingdom, Vietnam, Germany, Japan, France, Mexico, Brazil, Indonesia, Philippines, and Kenya.
+SpareScout exposes 17 localized demo markets: United States, Singapore, Malaysia, India, United Arab Emirates, Australia, Canada, United Kingdom, Vietnam, Germany, Japan, France, Mexico, Brazil, Indonesia, Philippines, and Kenya. CALL-E currently rejects English calls to Kenyan recipients, so the app blocks Kenya live plans while keeping the clearly labeled no-call fixture available.
 
 The interface only offers the spoken languages documented for the selected region. See [`lib/markets.ts`](lib/markets.ts) for the versioned matrix and `/markets` in the application for the user-facing list.
 

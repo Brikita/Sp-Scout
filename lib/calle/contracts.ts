@@ -1,5 +1,5 @@
 import type { Call, JsonObject } from "@call-e/calle";
-import { getSupportedMarket, supportsMarketLocale } from "../markets.ts";
+import { getSupportedMarket, supportsLiveMarketLocale, supportsMarketLocale } from "../markets.ts";
 import { parseCallWindow } from "../call-window.ts";
 
 export type SourcingSupplier = {
@@ -120,6 +120,9 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
   }
   if (!supportsMarketLocale(countryCode, locale)) {
     throw new Error(`${locale} is not a supported CALL-E language for ${market.countryName}.`);
+  }
+  if (isLive && !supportsLiveMarketLocale(countryCode, locale)) {
+    throw new Error(`Live CALL-E calling is not currently available for ${market.countryName} in this language. Use the clearly labeled no-call demo or choose a supported recipient region.`);
   }
 
   if (!Array.isArray(input.suppliers) || input.suppliers.length < 1 || input.suppliers.length > 10) {

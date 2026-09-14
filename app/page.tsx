@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { isTerminalExecution, type SourcingExecution, type SourcingRequest } from "../lib/calle/contracts.ts";
-import { getSupportedMarket, SUPPORTED_MARKETS, type SupportedMarket } from "../lib/markets.ts";
+import { getSupportedMarket, SUPPORTED_MARKETS, supportsLiveMarketLocale, type SupportedMarket } from "../lib/markets.ts";
 import { rememberHistoryAccess } from "../lib/history-store.ts";
 import { GuidedRequest } from "./components/guided-request";
 import { QuoteComparison } from "./components/quote-comparison";
@@ -90,6 +90,8 @@ export default function Home() {
   });
 
   const market = useMemo(() => getSupportedMarket(form.countryCode) ?? SUPPORTED_MARKETS[0], [form.countryCode]);
+  const liveMarketSupported = supportsLiveMarketLocale(market.countryCode, form.locale);
+  const liveAvailableForMarket = liveAvailable && liveMarketSupported;
   const fixtureSuppliers = useMemo(() => suppliersForMarket(market), [market]);
   const activeSuppliers = useMemo<UiSupplier[]>(() => executionMode === "fixture"
     ? fixtureSuppliers
@@ -129,6 +131,7 @@ export default function Home() {
   const updateMarket = (countryCode: string) => {
     const nextMarket = getSupportedMarket(countryCode);
     if (!nextMarket) return;
+    if (!supportsLiveMarketLocale(nextMarket.countryCode, nextMarket.defaultLocale)) setExecutionMode("fixture");
     setForm((current) => ({
       ...current,
       countryCode: nextMarket.countryCode,
@@ -291,7 +294,7 @@ export default function Home() {
           </p>
         </div>
         <div className="hero-proof" aria-label="Product metrics">
-          <div><strong>17</strong><span>CALL-E markets</span></div>
+          <div><strong>17</strong><span>localized demo markets</span></div>
           <div><strong>01</strong><span>brief for every supplier</span></div>
           <div><strong>You</strong><span>make the final choice</span></div>
         </div>
@@ -317,7 +320,7 @@ export default function Home() {
 
           <GuidedRequest key={draftKey} form={form} market={market} locked={stage !== "request"} busy={isSubmitting} error={requestError}
             onField={updateField} onMarket={updateMarket} onSubmit={reviewPlan} mode={executionMode} onMode={setExecutionMode}
-            liveAvailable={liveAvailable} suppliers={liveSuppliers} onSuppliers={setLiveSuppliers} operatorToken={operatorToken} onOperator={setOperatorToken}
+            liveAvailable={liveAvailableForMarket} liveUnavailableReason={liveAvailable && !liveMarketSupported ? `${market.countryName} is fixture-only because CALL-E does not currently accept this recipient/language combination.` : "Available on the configured pilot server."} suppliers={liveSuppliers} onSuppliers={setLiveSuppliers} operatorToken={operatorToken} onOperator={setOperatorToken}
             consent={recipientConsentConfirmed} onConsent={setRecipientConsentConfirmed} start={callWindowStart} end={callWindowEnd} onStart={setCallWindowStart} onEnd={setCallWindowEnd} />
         </div>
 

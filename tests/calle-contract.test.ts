@@ -18,7 +18,7 @@ import {
   isAuthorizedLiveOperator,
   liveRecipientAllowlist,
 } from "../lib/live-security.ts";
-import { FICTIONAL_FIXTURE_PHONES, SUPPORTED_MARKETS, supportsMarketLocale } from "../lib/markets.ts";
+import { FICTIONAL_FIXTURE_PHONES, SUPPORTED_MARKETS, supportsLiveMarketLocale, supportsMarketLocale } from "../lib/markets.ts";
 
 const request: SourcingRequest = {
   executionMode: "fixture",
@@ -58,6 +58,15 @@ test("validates global sourcing inputs and E.164 suppliers", () => {
   assert.throws(
     () => parseSourcingRequest({ ...request, executionMode: "live", recipientConsentConfirmed: true, authorizedCallWindow: "" }),
     /authorizedCallWindow is required/,
+  );
+  assert.throws(
+    () => parseSourcingRequest({
+      ...request,
+      executionMode: "live",
+      recipientConsentConfirmed: true,
+      authorizedCallWindow: `${new Date(Date.now() - 60000).toISOString()}/${new Date(Date.now() + 60000).toISOString()}`,
+    }),
+    /not currently available for Kenya/i,
   );
 });
 
@@ -135,6 +144,8 @@ test("defines a valid localized configuration for every supported CALL-E market"
     for (const phone of market.fixturePhones) assert.match(phone, /^\+[1-9]\d{7,14}$/);
     assert.deepEqual(market.fixturePhones, FICTIONAL_FIXTURE_PHONES);
   }
+  assert.equal(supportsLiveMarketLocale("KE", "en-KE"), false);
+  assert.equal(supportsLiveMarketLocale("US", "en-US"), true);
 });
 
 test("builds a disclosed, information-only call task", () => {
