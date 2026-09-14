@@ -302,7 +302,7 @@ export default function Home() {
         <div>
           <strong>{executionMode === "live" ? "Live pilot mode" : "Safe demo mode"}</strong>
           <span>{executionMode === "live"
-            ? `Approving the reviewed plan will place real calls to ${activeSuppliers.length} business contacts.`
+            ? `Approving the reviewed plan will place real calls to ${activeSuppliers.length} business ${activeSuppliers.length === 1 ? "contact" : "contacts"}.`
             : "Explore the complete workflow with sample suppliers. No phone calls or reservations will be made."}</span>
         </div>
         <span className="mode-chip">{executionMode === "live" ? "REAL CALLS" : "DRY RUN"}</span>
