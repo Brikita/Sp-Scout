@@ -358,7 +358,7 @@ export default function Home() {
                 </div>
               )}
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>
-              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>{executionMode === "live" ? `Approve ${reviewedRequest.suppliers.length} supplier calls` : "Approve 3 demo calls"} <span>→</span></button>
+              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>{executionMode === "live" ? `Approve ${reviewedRequest.suppliers.length} supplier ${reviewedRequest.suppliers.length === 1 ? "call" : "calls"}` : "Approve 3 demo calls"} <span>→</span></button>
               {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
               <button className="text-button" type="button" onClick={() => { setApprovalToken(null); setReviewedRequest(null); setStage("request"); }}>Edit request</button>
             </div>

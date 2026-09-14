@@ -1,43 +1,144 @@
-# Three-minute demo script
+# SpareScout demo — exact recording script
 
-Target: 2 minutes 45 seconds. Record the interface at desktop width and keep captions on screen.
+**Target length:** 2 minutes 40 seconds.
+**Format:** desktop screen recording, 16:9, with captions. Record the supplier's ringing-phone shot separately and insert it at 1:30. Use one consenting supplier for the main demo.
 
-## 0:00–0:15 — The pain
+Text in quotation marks is the exact narration. Text under **Action** is what to do on screen. Do not read the action notes aloud.
 
-“The correct vehicle part often exists, but not in a searchable catalogue. Buyers repeat chassis details across several calls and still risk comparing the wrong items.”
+## Before recording
 
-Show the headline and the fitment-first request.
+1. Use the D1-backed Sites deployment and confirm that **Live pilot** is enabled.
+2. Use a supplier who consented to the call. Obtain separate permission before publishing its name, voice, or transcript. If that permission is absent, use **Consenting supplier** as the displayed name and mute the supplier audio.
+3. Add only that supplier to the server allowlist. Set a calling window that covers the rehearsal and recording.
+4. Rehearse once. Confirm that the completed live result appears in History.
+5. Prepare a clear printed label image containing reference `43550-12030`.
+6. Close notifications and unrelated tabs. Never record environment variables, the operator token, approval data, full phone numbers, browser developer tools, or private consent messages.
+7. Crop or blur the phone-number field when the supplier form is visible. The password field may show dots, but the credential must never be revealed.
 
-## 0:15–0:38 — Worldwide request
+## 0:00–0:14 — The problem
 
-Show the three-step request wizard. Optionally read a clear part-label photo and confirm the extracted reference. Switch markets in Preferences to show currency, language and location changing together. On Suppliers, show the nearby business search and distinguish sample contacts from an authorized live pilot.
+**Action:** Start on the SpareScout home page. Keep the headline and request workspace visible.
 
-## 0:38–0:58 — Approval boundary
+**Say:**
 
-Open the plan. Point out operator authentication, server-allowlisted recipients, AI disclosure, masked numbers, the exact questions, the 15-minute approval, and the ban on purchases or reservations. Never show the operator credential or deployment allowlist.
+> “The right vehicle part often exists, but its availability is trapped behind phone calls. Buyers repeat the same details to several suppliers and still struggle to compare fitment, stock, price, and delivery.”
 
-## 0:58–1:28 — CALL-E execution
+## 0:14–0:38 — Build one reliable request
 
-For the final submission, insert footage from an explicitly authorized real test. Show CALL-E creating one batch task and progressing through suppliers. Do not display full numbers, credentials, or an unconsented transcript.
+**Action:** In **Your part**, set:
 
-If no real pilot has been authorized yet, record the fixture flow and label it prominently as **NO-CALL FIXTURE**. Never imply the animation is a phone call.
+- Vehicle: `2014 Toyota Fielder`
+- Part needed: `Front-left wheel bearing`
 
-## 1:28–1:58 — Structured evidence
+Open **Have a photo of the label?**, choose the prepared image, wait for OCR, check that `43550-12030` appears, then select **Use this reference**.
 
-Reveal the recommendation and offer cards. Compare compatibility, brand, condition, price, stock, delivery and evidence. Switch to the side-by-side table, filter offers ready to select, and download the sourcing brief. Open the incomplete result and explain why it is not selectable.
+**Say:**
 
-On a D1-backed pilot deployment, open **Request history** to show the durable audit record and masked supplier numbers. The public Vercel fixture has no D1 binding; use the downloaded sourcing brief there and do not claim durable history is available on that runtime.
+> “SpareScout captures the request once. I can type the reference or read printed text from a label photo. The extracted value is never trusted automatically—I check it, then choose to use it.”
 
-Explain the recovery path: if a live sourcing tab closes before CALL-E reaches a terminal state, opening or refreshing History securely retrieves the existing run and saves its newest status. It cannot dial again because the recovery route performs only a provider GET.
+**Action:** Select **Continue to preferences**.
 
-## 1:58–2:18 — Separate decision
+## 0:38–0:53 — Keep every quote comparable
 
-Select one offer and open the reservation preview. Explain that sourcing approval did not grant purchasing authority and no reservation call has started.
+**Action:** In **Your preferences**, leave or select:
 
-## 2:18–2:35 — Reliability
+- Calling market: `Kenya`
+- Call language: `English`
+- Budget ceiling: `8000`
+- Needed by: `Today`
+- Delivery location: `Nairobi CBD`
 
-Show request history or code-level overlays for approval fingerprints, idempotency, read-only status polling, and durable D1 records. Keep this visual and brief.
+Select **Continue to suppliers**.
 
-## 2:35–2:45 — Evidence and close
+**Say:**
 
-Show the pilot page. Use only the automatically calculated live values; fixtures are excluded. Close with: “SpareScout turns phone-only inventory into evidence a buyer can safely act on.”
+> “The same market, budget, deadline, and delivery destination are applied to every supplier conversation, so the answers can be compared fairly.”
+
+## 0:53–1:12 — Choose the live pilot safely
+
+**Action:** Select **Live pilot**. Use one preconfigured consenting supplier. Do not pause on the complete phone number. Set the calling-window start and end, then check the direct-consent statement.
+
+**Say:**
+
+> “For this live demonstration, I am using one supplier who agreed in advance to receive the AI-assisted call. The server independently requires operator authentication, an allowlisted recipient, direct consent, and an active calling window.”
+
+**Action:** Select **Review supplier call plan**.
+
+## 1:12–1:30 — Human approval before dialing
+
+**Action:** Pause on **Review the call plan**. Slowly point to the fitment question, quote fields, delivery request, masked supplier number, consent confirmation, and **No commitments** panel.
+
+**Say:**
+
+> “Before anything happens, I review the exact recipient and questions. This approval expires after fifteen minutes and cannot authorize payment, purchase, or a reservation. The call only gathers a quote.”
+
+**Action:** Select **Approve 1 supplier call** once.
+
+## 1:30–1:47 — Show the real CALL-E call
+
+**Action:** Show **Live calls in progress** and **Scout is on the line**. Insert three to five seconds of the consenting supplier's phone ringing or being answered. Mask the number. Then use a clean edit with the caption: `Live CALL-E result returned after the call`.
+
+**Say:**
+
+> “CALL-E now places the approved call and SpareScout monitors that same run. The interface polls for status; refreshing History retrieves the existing run rather than dialing again.”
+
+## 1:47–2:15 — Turn the conversation into evidence
+
+**Action:** On the live results screen, show **Live results**. Open **View call evidence**. Point to fitment status, price, brand and condition, stock, delivery, and the evidence text. If a field is missing, point to the missing or follow-up state instead of hiding it.
+
+**Say:**
+
+> “The conversation returns as structured evidence. Fitment comes before price, and missing answers stay missing. An offer becomes selectable only when compatibility, a positive price, confirmed stock, and supporting evidence are all present.”
+
+**Action:** Select **Side by side**, then **Ready to select**.
+
+**Say:**
+
+> “Now I can compare only the offers that are ready for a decision, while incomplete outcomes remain available for follow-up.”
+
+## 2:15–2:30 — Preserve the buyer's control
+
+**Action:** Return to **Cards** if needed. Select the verified offer, then select **Preview reservation call**. Pause on **Draft only · nothing reserved**.
+
+**Say:**
+
+> “Selecting a quote still does not buy or reserve anything. SpareScout prepares a separate follow-up, and another explicit approval would be required before any future reservation call.”
+
+## 2:30–2:40 — Close
+
+**Action:** Select **Download brief**, then finish on **The project** page or the product headline.
+
+**Say:**
+
+> “SpareScout turns phone-only inventory into comparable evidence, while the buyer keeps control of every consequential step.”
+
+End immediately after the final sentence.
+
+## Required edit labels
+
+Use these exact captions where applicable:
+
+- `LIVE CALL — PRE-ARRANGED CONSENTING SUPPLIER`
+- `PHONE NUMBER MASKED FOR PRIVACY`
+- `Live CALL-E result returned after the call`
+- `QUOTE COLLECTION ONLY — NOTHING PURCHASED OR RESERVED`
+
+Do not label fixture footage as live. If fixture footage is included, keep `NO-CALL FIXTURE` visible for the entire fixture segment.
+
+## Exact fallback if the live result is incomplete
+
+Keep the real incomplete result in the video and replace the narration in the results section with:
+
+> “This live call did not return every required field, and SpareScout does not invent the missing information. The offer remains unavailable for selection until fitment, price, stock, and evidence are confirmed.”
+
+You may then insert up to ten seconds of the fixture comparison, with `NO-CALL FIXTURE` visible, and say:
+
+> “This clearly labeled fixture shows the completed comparison interface without claiming that another call occurred.”
+
+## Evidence to retain privately
+
+- The deployed commit SHA and recording date
+- Written consent for the call
+- Separate permission for any publicly identifiable shop name, voice, or transcript
+- The CALL-E run ID and masked History record
+- The final public video URL
