@@ -77,8 +77,6 @@ export default function Home() {
   const [liveAvailable, setLiveAvailable] = useState(false);
   const [liveSuppliers, setLiveSuppliers] = useState<SupplierDraft[]>([
     { id: "live-supplier-1", name: "", area: "", phone: "" },
-    { id: "live-supplier-2", name: "", area: "", phone: "" },
-    { id: "live-supplier-3", name: "", area: "", phone: "" },
   ]);
   const [form, setForm] = useState({
     vehicle: "2014 Toyota Fielder",
