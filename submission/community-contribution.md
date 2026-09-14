@@ -5,6 +5,8 @@ Target path: `apps/typescript/sparescout/`
 
 The official contribution guide was rechecked on 17 August 2026. The prepared app README, exact upstream table row, pull-request body, and safe copy script live in `submission/awesome-phone-call-agents/`.
 
+The original app contribution was merged in [PR #261](https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261). A tested provider-compatibility update is open in [PR #629](https://github.com/CALLE-AI/awesome-phone-call-agents/pull/629); its upstream validation check passed on 14 September 2026. Use merged PR #261 as the required Devpost project-submission URL and list #629 as the maintenance follow-up when space permits.
+
 Proposed README entry:
 
 > `apps/typescript/sparescout` — Approval-gated multi-supplier vehicle-part sourcing with strict fitment quote schemas, stable CALL-E idempotency, durable evidence history, supported-market localization, and a no-call fixture default.
