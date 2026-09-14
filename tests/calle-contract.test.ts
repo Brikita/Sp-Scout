@@ -287,6 +287,12 @@ test("uses the official SDK with schemas and an idempotency key in live mode", a
   assert.equal((body.recipients as unknown[]).length, 2);
   assert.ok(body.result_schema);
   assert.ok(body.recipient_result_schema);
+  const serializedSchemas = JSON.stringify({
+    resultSchema: body.result_schema,
+    recipientResultSchema: body.recipient_result_schema,
+  });
+  assert.doesNotMatch(serializedSchemas, /"minimum"|"maximum"|"maxItems"|"minItems"|"oneOf"|"anyOf"|"allOf"|"\$ref"/);
+  assert.doesNotMatch(serializedSchemas, /"type":\s*\[/);
 });
 
 test("polls an existing CALL-E run without starting another call", async () => {
