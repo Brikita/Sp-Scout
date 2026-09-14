@@ -1,5 +1,6 @@
-import type { Call, CallStatus, JsonObject } from "@call-e/calle";
+import type { Call, JsonObject } from "@call-e/calle";
 import { getSupportedMarket, supportsMarketLocale } from "../markets.ts";
+import { parseCallWindow } from "../call-window.ts";
 
 export type SourcingSupplier = {
   id: string;
@@ -46,7 +47,7 @@ export type NormalizedQuote = {
 export type SourcingExecution = {
   mode: "fixture" | "live";
   callId: string;
-  status: CallStatus | "completed";
+  status: Call["status"];
   taskCompleted: boolean | null;
   completionConfidence: { score: number; label: string } | null;
   summary: string | null;
@@ -93,6 +94,7 @@ export function parseSourcingRequest(value: unknown): SourcingRequest {
   const authorizedCallWindow = isLive
     ? requiredText(input.authorizedCallWindow, "authorizedCallWindow", 120)
     : "No live call — fixture";
+  if (isLive) parseCallWindow(authorizedCallWindow);
   const budgetAmount = Number(input.budgetAmount);
   if (!Number.isFinite(budgetAmount) || budgetAmount <= 0) {
     throw new Error("budgetAmount must be greater than zero.");
@@ -224,9 +226,9 @@ export function buildRecipientResultSchema(currency: string): JsonObject {
       compatibility: { type: "string", enum: ["confirmed", "rejected", "unknown"] },
       brand: { type: "string" },
       condition: { type: "string", enum: ["new", "used", "remanufactured", "unknown"] },
-      price_amount: { type: "number", minimum: 0 },
+      price_amount: { type: ["number", "null"], minimum: 0 },
       currency: { type: "string", enum: [currency] },
-      available_quantity: { type: "integer", minimum: 0 },
+      available_quantity: { type: ["integer", "null"], minimum: 0 },
       delivery_available: { type: "string", enum: ["yes", "no", "unknown"] },
       delivery_eta: { type: "string" },
       reservation_possible: { type: "string", enum: ["yes", "no", "unknown"] },
@@ -264,8 +266,8 @@ export function normalizeCall(call: Call, suppliers: SourcingSupplier[]): Sourci
     summary: call.summary,
     evidence: call.evidence,
     quotes: call.recipients.map((recipient, index) => ({
-      supplierId: suppliers[index]?.id ?? recipient.id,
-      supplierName: suppliers[index]?.name ?? `Supplier ${index + 1}`,
+      supplierId: suppliers.find((supplier) => recipient.phones.includes(supplier.phone))?.id ?? recipient.id,
+      supplierName: suppliers.find((supplier) => recipient.phones.includes(supplier.phone))?.name ?? `Unmatched supplier ${index + 1}`,
       status: recipient.status,
       result: recipient.structuredResult,
       summary: recipient.summary,

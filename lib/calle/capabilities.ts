@@ -13,7 +13,7 @@ export function calculateCalleCapabilities(runtime: CalleCapabilityBindings) {
     fixtureAvailable: true,
     liveAvailable:
       runtime.CALLE_MODE === "live" &&
-      Boolean(runtime.CALLE_API_KEY && runtime.SPARESCOUT_APPROVAL_SECRET) &&
+      Boolean(runtime.CALLE_API_KEY && runtime.SPARESCOUT_APPROVAL_SECRET && runtime.SPARESCOUT_APPROVAL_SECRET.length >= 24) &&
       hasLiveSecurityConfiguration(runtime),
   };
 }

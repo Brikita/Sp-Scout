@@ -1,0 +1,36 @@
+"use client";
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- The horizontally scrollable comparison region must be keyboard focusable. */
+import { useMemo, useState } from "react";
+import type { QuoteView } from "../../lib/quote-view.ts";
+import type { SourcingRequest } from "../../lib/calle/contracts.ts";
+
+export function QuoteComparison({ quotes, request, fixture }: { quotes: QuoteView[]; request: SourcingRequest; fixture: boolean }) {
+  const [readyOnly, setReadyOnly] = useState(false);
+  const [view, setView] = useState<"cards" | "table">("cards");
+  const [selected, setSelected] = useState<number | null>(null);
+  const [preview, setPreview] = useState(false);
+  const money = (value: number | null) => value === null ? "Not quoted" : new Intl.NumberFormat(request.locale, { style: "currency", currency: request.currency, maximumFractionDigits: 0 }).format(value);
+  const sorted = useMemo(() => [...quotes].sort((a, b) => Number(b.selectable) - Number(a.selectable) || (a.price ?? Infinity) - (b.price ?? Infinity)), [quotes]);
+  const visible = readyOnly ? sorted.filter((quote) => quote.selectable) : sorted;
+  const best = sorted.find((quote) => quote.selectable);
+  const chosen = quotes.find((quote) => quote.id === selected);
+  const download = () => {
+    const text = [`SpareScout sourcing brief — ${fixture ? "NO-CALL FIXTURE" : "LIVE RESULTS"}`, `${request.vehicle} | ${request.part}`, `Fitment: ${request.fitmentReference}`, `Budget: ${money(request.budgetAmount)} | ${request.deliveryLocation} | ${request.neededBy}`, "", ...sorted.flatMap((quote) => [quote.supplier, `${quote.status} | ${money(quote.price)} | ${quote.brand} | ${quote.condition}`, `${quote.stock} | ${quote.delivery}`, `Evidence: ${quote.evidence}`, quote.note ?? "", ""]), "Quote collection only. Nothing purchased or reserved."].join("\n");
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "sparescout-sourcing-brief.txt"; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return <section className="results-section decision-board" aria-labelledby="results-title">
+    <div className="results-heading"><div><p className="eyebrow">Your sourcing brief · {fixture ? "Demo results" : "Live results"}</p><h2 id="results-title">Compare the part. Then the price.</h2><p>{request.part} · {request.vehicle}</p></div><button className="secondary-button" onClick={download}>↓ Download brief</button></div>
+    {best ? <div className="recommendation"><span className="recommendation-symbol" aria-hidden="true">✓</span><div><p className="eyebrow">Lowest priced confirmed fit</p><h3>{best.supplier}</h3><p>{best.evidence}</p><small>{best.delivery} · {best.stock}</small></div><div className="recommendation-price"><strong>{money(best.price)}</strong><span>{best.price! <= request.budgetAmount ? `${money(request.budgetAmount - best.price!)} below your budget` : `${money(best.price! - request.budgetAmount)} above your budget`}</span></div></div> : <div className="no-offers"><h3>No offer is ready to select yet.</h3><p>Keep the unanswered questions visible. Confirm fitment, price and stock with a supplier before choosing.</p></div>}
+    <div className="comparison-toolbar"><div className="segmented" aria-label="Quote filter"><button aria-pressed={!readyOnly} onClick={() => setReadyOnly(false)}>All results ({quotes.length})</button><button aria-pressed={readyOnly} onClick={() => setReadyOnly(true)}>Ready to select ({quotes.filter((quote) => quote.selectable).length})</button></div><div className="segmented" aria-label="Comparison view"><button aria-pressed={view === "cards"} onClick={() => setView("cards")}>Cards</button><button aria-pressed={view === "table"} onClick={() => setView("table")}>Side by side</button></div></div>
+    {!visible.length && <p className="no-offers">No results match this filter. Choose “All results” to see what needs follow-up.</p>}
+    {view === "table" && visible.length > 0 ? <div className="comparison-scroll" role="region" aria-label="Supplier comparison" tabIndex={0}><table className="comparison-table"><caption>Supplier quotes, ordered by readiness and price</caption><thead><tr><th scope="col">What matters</th>{visible.map((quote) => <th scope="col" key={quote.id}>{quote.supplier}</th>)}</tr></thead><tbody>{([['Fitment', (q: QuoteView) => q.status], ['Price', (q: QuoteView) => money(q.price)], ['Brand / condition', (q: QuoteView) => `${q.brand} · ${q.condition}`], ['Stock', (q: QuoteView) => q.stock], ['Delivery', (q: QuoteView) => q.delivery], ['Evidence', (q: QuoteView) => q.evidence]] as const).map(([label, value]) => <tr key={label}><th scope="row">{label}</th>{visible.map((quote) => <td key={quote.id}>{value(quote)}</td>)}</tr>)}<tr><th scope="row">Next step</th>{visible.map((quote) => <td key={quote.id}><button className="select-button" disabled={!quote.selectable} onClick={() => { setSelected(quote.id); setPreview(false); }}>{selected === quote.id ? "Selected ✓" : quote.selectable ? "Select offer" : "Needs follow-up"}</button></td>)}</tr></tbody></table></div> : <div className="quote-grid">{visible.map((quote) => <article key={quote.id} className={`quote-card ${selected === quote.id ? "selected" : ""}`}>
+      {quote.id === best?.id && <span className="best-tag">BEST VERIFIED OFFER</span>}<div className="quote-top"><div><p>{quote.area}</p><h3>{quote.supplier}</h3></div><span className={`fitment ${quote.status.toLowerCase()}`}>{quote.status}</span></div>
+      <div className="quote-price"><strong>{money(quote.price)}</strong><span>{quote.brand} · {quote.condition}</span></div><dl><div><dt>Availability</dt><dd>{quote.stock}</dd></div><div><dt>Delivery</dt><dd>{quote.delivery}</dd></div></dl>
+      <details><summary>View call evidence <span>+</span></summary><p>{quote.evidence}</p></details>{quote.note && <p className="warning-note">{quote.note}</p>}
+      <button className="select-button" disabled={!quote.selectable} onClick={() => { setSelected(quote.id); setPreview(false); }}>{selected === quote.id ? "Offer selected ✓" : quote.selectable ? "Select this offer" : "Needs follow-up"}</button>
+    </article>)}</div>}
+    <div className="reservation-bar"><div><p><strong>{chosen ? `${chosen.supplier} selected` : "Your decision, with the evidence beside it."}</strong><small>A separate approval is always required before a reservation call.</small></p></div><button disabled={!chosen} onClick={() => setPreview(true)}>Preview reservation call</button></div>
+    {preview && chosen && <div className="reservation-preview" role="status"><p className="eyebrow">Draft only · nothing reserved</p><h3>Here’s what a follow-up would confirm.</h3><p>Ask {chosen.supplier} to reconfirm {request.part} for {request.vehicle}, reference {request.fitmentReference}, at {money(chosen.price)}. Confirm the collection or delivery terms and how long the item could be held.</p><p>{fixture ? "Demo complete—no supplier was contacted and nothing was reserved." : "Quote collection is complete. No reservation call has been placed."}</p><small>Reservation calling is not enabled. This preview does not send a message or start a call.</small></div>}
+  </section>;
+}

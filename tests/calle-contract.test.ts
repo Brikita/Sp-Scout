@@ -73,7 +73,7 @@ test("exposes live calling only when every trusted runtime binding is present", 
   assert.equal(calculateCalleCapabilities({
     CALLE_MODE: "live",
     CALLE_API_KEY: "calle_test_key",
-    SPARESCOUT_APPROVAL_SECRET: "test-secret",
+    SPARESCOUT_APPROVAL_SECRET: "test-secret-at-least-24-characters",
     ...liveSecurity,
   }).liveAvailable, true);
 });
@@ -238,7 +238,7 @@ test("uses the official SDK with schemas and an idempotency key in live mode", a
     ...request,
     executionMode: "live",
     recipientConsentConfirmed: true,
-    authorizedCallWindow: "17 August 2026, 3:00–4:00 PM EAT",
+    authorizedCallWindow: `${new Date(Date.now() - 60000).toISOString()}/${new Date(Date.now() + 60000).toISOString()}`,
   });
   const execution = await executeSourcingPlan(livePlan, "approved-plan-token", {
     mode: "live",

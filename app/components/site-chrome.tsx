@@ -6,7 +6,7 @@ const primaryLinks = [
   { href: "/markets", label: "Markets" },
   { href: "/safety", label: "Safety" },
   { href: "/history", label: "History" },
-  { href: "/about", label: "About" },
+  { href: "/about", label: "The project" },
 ];
 
 const mobileLinks = [

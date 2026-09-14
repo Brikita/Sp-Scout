@@ -33,6 +33,12 @@ flowchart LR
 
 ## Implemented capabilities
 
+- Three-step request wizard with a live summary and editable review boundary.
+- Browser-based part-label OCR with explicit user confirmation of extracted references.
+- Location-aware Google Maps supplier search; listings are not treated as stock or consent verification.
+- Quote cards, side-by-side comparison, readiness filters, and downloadable sourcing briefs.
+- An expanded project information page with architecture, evidence status, and FAQs.
+
 - Official `@call-e/calle` server SDK integration.
 - Strict aggregate and per-supplier JSON result schemas.
 - AI identity disclosure and information-only call instructions.
@@ -127,7 +133,7 @@ See [`docs/call-e-integration.md`](docs/call-e-integration.md) for the implement
 
 ## Current evidence status
 
-The fixture workflow, official SDK request shape, approval verification, idempotency, status polling, supported markets, rendered routes, and pilot calculations are automated and passing. A consenting real-supplier pilot has not yet been run, so the evidence board intentionally shows no live performance values.
+The fixture workflow, official SDK request shape, approval verification, idempotency, status polling, supported markets, rendered routes, and pilot calculations have automated checks. `npm run check` now includes TypeScript checking. A consenting real-supplier pilot has not yet been published, so the evidence board intentionally shows no live performance values.
 
 ## License
 

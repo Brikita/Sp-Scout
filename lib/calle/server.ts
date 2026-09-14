@@ -2,6 +2,7 @@ import { CalleClient } from "@call-e/calle";
 import { approvalFingerprint } from "./approval.ts";
 import { normalizeCall, type SourcingCallPlan, type SourcingExecution } from "./contracts.ts";
 import { executeFixture } from "./fixtures.ts";
+import { assertCallWindowOpen } from "../call-window.ts";
 
 export type CalleRuntimeConfig = {
   mode: "fixture" | "live";
@@ -39,6 +40,7 @@ export async function executeSourcingPlan(
     throw new Error("Live calling is unavailable. Keep this request in fixture mode or configure the trusted server first.");
   }
   if (!config.apiKey) throw new Error("Live calling is unavailable because CALLE_API_KEY is not configured.");
+  assertCallWindowOpen(plan.request.authorizedCallWindow);
 
   const client = new CalleClient({
     apiKey: config.apiKey,

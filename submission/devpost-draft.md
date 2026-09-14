@@ -14,11 +14,13 @@ Independent auto-parts dealers often have current stock that is missing or stale
 
 ## What it does
 
-SpareScout accepts a localized vehicle-part request, prepares a reviewable supplier call plan, and requires explicit approval before CALL-E can contact anyone. CALL-E gathers fitment, brand, condition, price, stock, and delivery information from several suppliers. Strict result schemas turn those conversations into comparable quotes with confidence and evidence. Anything incomplete remains visibly incomplete.
+SpareScout accepts a localized vehicle-part request, prepares a reviewable supplier call plan, and requires explicit approval before CALL-E can contact anyone. CALL-E gathers fitment, brand, condition, price, stock, and delivery information from several suppliers. Strict result schemas turn those conversations into comparable quotes with readiness labels and evidence. Anything incomplete remains visibly incomplete.
 
 The public path is a safe no-call fixture. The trusted backend implements the real CALL-E TypeScript SDK, stable idempotency, durable status monitoring, and D1 history. A sourcing approval never authorizes payment, purchase, or a reservation.
 
 ## How we built it
+
+The updated interface adds a three-step request flow, confirmed part-label OCR, nearby business search, quote-readiness filters, a side-by-side comparison and a downloadable sourcing brief. These additions must be released before the submitted video depicts them as available at the public demo URL.
 
 - React 19, TypeScript, vinext, Vite, and a Cloudflare Workers-compatible runtime.
 - Official `@call-e/calle` server SDK for batch call creation and result retrieval.
@@ -29,7 +31,7 @@ The public path is a safe no-call fixture. The trusted backend implements the re
 - Seventeen supported CALL-E regions with market-aware language and currency.
 - Automated pilot metrics that include only durable live records and exclude every fixture.
 - A private, browser-authorized sourcing ledger backed by durable D1 records and hashed per-request history credentials.
-- Interruption-safe recovery that refreshes an existing non-terminal CALL-E run from History without creating another call.
+- Recovery of a saved non-terminal CALL-E run from History without creating another call. Recovery after provider acceptance but before the call ID is saved remains future work.
 
 ## Technical challenges
 

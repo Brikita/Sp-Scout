@@ -1,6 +1,7 @@
 import { calculateCalleCapabilities } from "../../../lib/calle/capabilities";
 import type { CalleRuntimeConfig } from "../../../lib/calle/server";
 import { getRuntimeBindings } from "../../../lib/runtime-bindings";
+import { getOptionalD1 } from "../../../db";
 
 type RuntimeBindings = {
   CALLE_MODE?: string;
@@ -33,7 +34,8 @@ export function getLiveSecurityBindings() {
 }
 
 export function getCalleCapabilities() {
-  return calculateCalleCapabilities(bindings());
+  const capabilities = calculateCalleCapabilities(bindings());
+  return { ...capabilities, liveAvailable: capabilities.liveAvailable && Boolean(getOptionalD1()) };
 }
 
 export function getApprovalSecret(mode: "fixture" | "live"): string {

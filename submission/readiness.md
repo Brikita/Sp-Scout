@@ -1,32 +1,39 @@
 # Submission readiness
 
-Last verified: 31 August 2026
+Checked: 14 September 2026. **Internal readiness score: 70/100.** This is an evidence checklist, not an official judging score or probability of winning. Missing mandatory items still block a complete submission regardless of the score.
 
-SpareScout is product-complete for a no-call judge walkthrough and has a real server-side CALL-E runtime behind explicit approval. The remaining work depends on deliberate external actions, so this ledger separates built evidence from claims that must not be made yet.
-
-| Requirement | Status | Evidence or next action |
+| Area | Score | Evidence and remaining gap |
 | --- | --- | --- |
-| Complete product experience | Ready | Home, About, How it works, Markets, Safety, Privacy, History, and pilot-metrics surfaces are implemented. |
-| Global adaptability | Ready | Seventeen CALL-E recipient regions, market-aware currencies, and supported call languages are versioned in the application. |
-| Safe judge path | Ready | Deterministic fixture is the default and never calls a real number. |
-| Real CALL-E runtime | Implemented, not pilot-proven | Official server SDK, authenticated operator, server recipient allowlist, phone-free browser approval, direct-consent/window enforcement, pinned provider origin, stable idempotency, durable monitoring, and structured results are implemented. Run only an explicitly approved consenting-supplier test. |
-| Hosted live configuration | Ready | CALL-E CLI OAuth is usable, the trusted Sites runtime is configured, and the deployed no-call capability check reports live mode available. No secret values are committed. |
-| Automated verification | Ready | `npm run check` builds, renders, tests contracts, and lints the project. |
-| Durable pilot metrics | Infrastructure ready | Live-only calculations exclude fixtures. Populate them with the approved pilot; do not invent results. |
-| Public functional demo | Ready | https://sp-scout.vercel.app returns 200 and completed a fixture-only plan, approval, and three-quote execution walkthrough. Live calling is disabled on the judge runtime. |
-| Public source repository | Ready | `main` is publicly available at https://github.com/Brikita/Sp-Scout with no tracked runtime secrets. |
-| Community contribution PR | Open | The validated contribution is available at https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261. |
-| Demo video under three minutes | Script ready | Record `submission/demo-script.md` after the pilot so the video can show verified evidence. Upload publicly to YouTube or Vimeo. |
-| Devpost project copy | Draft ready | Replace every bracketed URL in `submission/devpost-draft.md` and include the public community PR URL. |
-| CALL-E account email | User-provided at submission | Enter it directly in Devpost; do not commit it to the repository. |
+| Product and UX | 26/30 | Guided request, recommendation, filters, comparison table, download and project page implemented locally. Synthetic photo recognition and the mobile fixture flow passed browser checks; broader device and real-label testing remains. |
+| CALL-E implementation and evidence | 15/20 | Official SDK, signed approval, consent/window enforcement, allowlist and durable polling implemented. No published consenting live-pilot result verified. |
+| Community contribution | 15/15 | Required PR #261 is merged, verified with GitHub on 14 September. |
+| Required submission materials | 8/25 | Description and script prepared. No public video URL; CALL-E email and final Devpost submission not verified. |
+| Release and judge access | 6/10 | Public demo returns HTTP 200. Latest UI and audit fixes remain local. |
+| **Total** | **70/100** | **Not yet ready for final submission.** |
 
-## Critical path
+## Verified requirements
 
-1. Privately add the verified consenting supplier set to the deployment allowlist, provide one exact test window, authenticate as the operator, review the resulting plan, then explicitly approve the real CALL-E pilot.
-2. Review the durable records and generated metrics; publish only sanitized evidence.
-3. Recheck the public Vercel deployment after each release from `main`.
-4. Record and upload the sub-three-minute demo.
-5. Prepare and validate the upstream app contribution, then authorize the public pull request.
-6. Replace all Devpost placeholders, perform a fresh judge walkthrough, and submit before 14 September 2026 at 18:45 Africa/Nairobi.
+Source: [official rules](https://call-e.devpost.com/rules), checked 14 September 2026.
 
-No live call, video upload, or final Devpost submission is performed by this checklist.
+- Functional CALL-E project accessible for judging.
+- Contribution PR URL, project description and CALL-E account email.
+- Public YouTube/Vimeo demonstration showing the functioning project, preferably under three minutes.
+- English materials or English translations.
+- A PowerPoint is **not required** and does not replace the video.
+- Deadline: **14 September 2026, 18:45 Africa/Nairobi** (23:45 Singapore).
+
+## Links
+
+- Public demo: https://sp-scout.vercel.app
+- Source: https://github.com/Brikita/Sp-Scout
+- Merged contribution: https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261
+- Video: not yet supplied or verified.
+
+## Final actions
+
+1. Release the verified changes and retest the actual judge URL.
+2. Record the functioning workflow using submission/demo-script.md. Label fixture footage clearly. Include real CALL-E evidence only from an approved consenting pilot.
+3. Upload the video publicly and add its URL to the draft and Devpost.
+4. Enter the CALL-E email directly in Devpost, check team and registration details, and complete submission before the deadline.
+
+Do not claim a real supplier pilot, durable history on the Vercel fixture, or publication of local changes without verification.

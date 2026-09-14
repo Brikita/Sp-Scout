@@ -22,7 +22,8 @@ test("server-renders the SpareScout sourcing experience", async () => {
   const html = await response.text();
   assert.match(html, /<title>SpareScout/);
   assert.match(html, /The right part/);
-  assert.match(html, /Review supplier call plan/);
+  assert.match(html, /Continue to/);
+  assert.match(html, /Your part/);
   assert.match(html, /Safe demo mode/);
   assert.match(html, /No phone calls or reservations will be made/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
@@ -52,8 +53,24 @@ test("server-renders every public product page with shared navigation", async ()
   }
 });
 
+test("fixture API requires approval and returns repeatable quotes without storage or dialing", async () => {
+  const { default: worker } = await import(new URL("../dist/server/index.js", import.meta.url));
+  const env = { CALLE_MODE: "fixture", SPARESCOUT_APPROVAL_SECRET: "fixture-test-secret-at-least-24-characters", ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } };
+  const post = (path, body) => worker.fetch(new Request(`http://localhost${path}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }), env, { waitUntil() {}, passThroughOnException() {} });
+  const planned = await post("/api/calls/plan", { executionMode: "fixture", vehicle: "2014 Toyota Fielder", part: "Wheel bearing", fitmentReference: "43550-12030", budgetAmount: 8000, currency: "KES", deliveryLocation: "Nairobi", neededBy: "Today", countryCode: "KE", locale: "en-KE", suppliers: [{ id: "test", name: "Test supplier", phone: "+12025550101" }] });
+  assert.equal(planned.status, 200);
+  const { approvalToken } = await planned.json();
+  assert.equal((await post("/api/calls/execute", { approvalToken })).status, 409);
+  assert.equal((await post("/api/calls/execute", { approvalToken: `${approvalToken}x`, approved: true })).status, 400);
+  const first = await (await post("/api/calls/execute", { approvalToken, approved: true })).json();
+  const retry = await (await post("/api/calls/execute", { approvalToken, approved: true })).json();
+  assert.equal(first.execution.mode, "fixture");
+  assert.equal(first.execution.callId, retry.execution.callId);
+  assert.deepEqual(first.execution.quotes, retry.execution.quotes);
+});
+
 test("keeps real-world side effects behind authenticated, recipient-bound approval", async () => {
-  const [page, layout, packageJson, planRoute, executeRoute, runtime, liveSecurity, approval, provider, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
+  const [homePage, layout, packageJson, planRoute, executeRoute, runtime, liveSecurity, approval, provider, historyRoute, statusRoute, historyLedger, sourcingDatabase] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -68,6 +85,7 @@ test("keeps real-world side effects behind authenticated, recipient-bound approv
     readFile(new URL("../app/history/history-ledger.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/sourcing.ts", import.meta.url), "utf8"),
   ]);
+  const page = homePage + await readFile(new URL("../app/components/quote-comparison.tsx", import.meta.url), "utf8");
 
   assert.match(page, /Approve 3 demo calls/);
   assert.match(page, /A separate approval is always required before a reservation call/);

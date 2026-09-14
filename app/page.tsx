@@ -1,26 +1,17 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { isTerminalExecution, type SourcingExecution } from "../lib/calle/contracts.ts";
+import { isTerminalExecution, type SourcingExecution, type SourcingRequest } from "../lib/calle/contracts.ts";
 import { getSupportedMarket, SUPPORTED_MARKETS, type SupportedMarket } from "../lib/markets.ts";
 import { rememberHistoryAccess } from "../lib/history-store.ts";
+import { GuidedRequest } from "./components/guided-request";
+import { QuoteComparison } from "./components/quote-comparison";
+import Link from "next/link";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
-type Stage = "request" | "plan" | "calling" | "results";
+import { executionQuotes, bestVerifiedQuote } from "../lib/quote-view.ts";
 
-type Quote = {
-  id: number;
-  supplier: string;
-  area: string;
-  status: "Verified" | "Partial";
-  brand: string;
-  price: number;
-  stock: string;
-  delivery: string;
-  confidence: number;
-  evidence: string;
-  note?: string;
-};
+type Stage = "request" | "plan" | "calling" | "results";
 
 type UiSupplier = { id: string; name: string; area: string; phone: string; fixturePhone: string };
 type SupplierDraft = { id: string; name: string; area: string; phone: string };
@@ -43,51 +34,11 @@ function maskPhoneForDisplay(phone: string): string {
   return phone.replace(/\d(?=\d{3})/g, "•");
 }
 
-const quotes: Quote[] = [
-  {
-    id: 1,
-    supplier: "AutoHub Industrial",
-    area: "Industrial Area",
-    status: "Verified",
-    brand: "SKF",
-    price: 6500,
-    stock: "2 in stock",
-    delivery: "Today · before 5 PM",
-    confidence: 96,
-    evidence: "Confirmed against chassis suffix 5K9 and OEM reference 43550-12030.",
-  },
-  {
-    id: 2,
-    supplier: "Kirinyaga Parts Co.",
-    area: "Kirinyaga Road",
-    status: "Verified",
-    brand: "NSK",
-    price: 7200,
-    stock: "1 in stock",
-    delivery: "Collection only",
-    confidence: 91,
-    evidence: "Seller read back the vehicle year, model and front-left position.",
-  },
-  {
-    id: 3,
-    supplier: "Mombasa Road Motors",
-    area: "Mombasa Road",
-    status: "Partial",
-    brand: "Aftermarket",
-    price: 5800,
-    stock: "Available",
-    delivery: "Tomorrow · KSh 450",
-    confidence: 68,
-    evidence: "Vehicle model matched, but the seller could not verify the OEM reference.",
-    note: "Compatibility needs manual confirmation before reservation.",
-  },
-];
-
 const callActivity = [
   "Call plan approved — preparing three supplier calls",
-  "AutoHub answered — checking chassis compatibility",
-  "Kirinyaga Parts quoted an NSK bearing",
-  "Mombasa Road Motors needs an OEM reference check",
+  "Sample supplier 1 — checking the fitment reference",
+  "Sample supplier 2 — preparing a comparison quote",
+  "Sample supplier 3 — showing incomplete fitment evidence",
   "Three conversations normalized into comparable offers",
 ];
 
@@ -105,36 +56,11 @@ const formatMoney = (value: number, currency = "KES", locale = "en-KE") =>
     maximumFractionDigits: 0,
   }).format(value);
 
-function executionQuotes(execution: SourcingExecution, supplierList: UiSupplier[]): Quote[] {
-  return execution.quotes.map((quote, index) => {
-    const result = quote.result ?? {};
-    const compatible = result.compatibility === "confirmed";
-    const quantity = typeof result.available_quantity === "number" ? result.available_quantity : 0;
-    const baseConfidence = Math.round((execution.completionConfidence?.score ?? 0.75) * 100);
-    const evidence = Array.isArray(result.evidence)
-      ? result.evidence.find((item): item is string => typeof item === "string")
-      : undefined;
-    return {
-      id: index + 1,
-      supplier: quote.supplierName,
-      area: supplierList.find((supplier) => supplier.id === quote.supplierId)?.area ?? "Supplier",
-      status: compatible ? "Verified" : "Partial",
-      brand: typeof result.brand === "string" && result.brand ? result.brand : "Unknown brand",
-      price: typeof result.price_amount === "number" ? result.price_amount : 0,
-      stock: quantity > 0 ? `${quantity} in stock` : "Stock unknown",
-      delivery: typeof result.delivery_eta === "string" && result.delivery_eta ? result.delivery_eta : "Delivery unknown",
-      confidence: compatible ? baseConfidence : Math.max(45, baseConfidence - 25),
-      evidence: evidence ?? quote.summary ?? "No evidence returned.",
-      note: compatible ? undefined : "Compatibility needs manual confirmation before reservation.",
-    };
-  });
-}
-
 export default function Home() {
+  const [draftKey, setDraftKey] = useState(0);
+  const [reviewedRequest, setReviewedRequest] = useState<SourcingRequest | null>(null);
   const [stage, setStage] = useState<Stage>("request");
   const [activeActivity, setActiveActivity] = useState(0);
-  const [selectedQuote, setSelectedQuote] = useState<number | null>(null);
-  const [reservationReady, setReservationReady] = useState(false);
   const [approvalToken, setApprovalToken] = useState<string | null>(null);
   const [historyAccessToken, setHistoryAccessToken] = useState<string | null>(null);
   const [execution, setExecution] = useState<SourcingExecution | null>(null);
@@ -144,7 +70,10 @@ export default function Home() {
   const [executionMode, setExecutionMode] = useState<"fixture" | "live">("fixture");
   const [operatorToken, setOperatorToken] = useState("");
   const [recipientConsentConfirmed, setRecipientConsentConfirmed] = useState(false);
-  const [authorizedCallWindow, setAuthorizedCallWindow] = useState("");
+  const [callWindowStart, setCallWindowStart] = useState("");
+  const [callWindowEnd, setCallWindowEnd] = useState("");
+  const authorizedCallWindow = callWindowStart && callWindowEnd
+    ? `${new Date(callWindowStart).toISOString()}/${new Date(callWindowEnd).toISOString()}` : "";
   const [liveAvailable, setLiveAvailable] = useState(false);
   const [liveSuppliers, setLiveSuppliers] = useState<SupplierDraft[]>([
     { id: "live-supplier-1", name: "", area: "", phone: "" },
@@ -171,12 +100,18 @@ export default function Home() {
         fixturePhone: supplier.phone,
         phone: maskPhoneForDisplay(supplier.phone),
       })), [executionMode, fixtureSuppliers, liveSuppliers]);
-  const displayQuotes = useMemo(() => execution ? executionQuotes(execution, activeSuppliers) : quotes, [execution, activeSuppliers]);
+  const displayQuotes = useMemo(() => execution ? executionQuotes(execution, reviewedRequest?.suppliers ?? activeSuppliers) : [], [execution, activeSuppliers, reviewedRequest]);
   const bestVerified = useMemo(
-    () => displayQuotes.filter((quote) => quote.status === "Verified").sort((a, b) => a.price - b.price)[0] ?? displayQuotes[0],
+    () => bestVerifiedQuote(displayQuotes),
     [displayQuotes],
   );
   const displayedActivity = execution?.mode === "live" ? liveCallActivity : callActivity;
+
+  useEffect(() => {
+    if (stage !== "request") {
+      document.getElementById(stage === "results" ? "results-title" : "call-review")?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }, [stage]);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -192,12 +127,6 @@ export default function Home() {
       .catch(() => { if (active) setLiveAvailable(false); });
     return () => { active = false; };
   }, []);
-
-  const updateLiveSupplier = (index: number, field: keyof Omit<SupplierDraft, "id">, value: string) => {
-    setLiveSuppliers((current) => current.map((supplier, supplierIndex) =>
-      supplierIndex === index ? { ...supplier, [field]: value } : supplier,
-    ));
-  };
 
   const updateMarket = (countryCode: string) => {
     const nextMarket = getSupportedMarket(countryCode);
@@ -245,19 +174,19 @@ export default function Home() {
       });
       const payload = await response.json() as {
         approvalToken?: string;
+        plan?: { request: SourcingRequest };
         historyAccess?: { requestId: string; token: string };
         error?: string;
       };
-      if (!response.ok || !payload.approvalToken) throw new Error(payload.error ?? "Unable to prepare the call plan.");
+      if (!response.ok || !payload.approvalToken || !payload.plan) throw new Error(payload.error ?? "Unable to prepare the call plan.");
       if (payload.historyAccess) {
         rememberHistoryAccess(payload.historyAccess);
         setHistoryAccessToken(payload.historyAccess.token);
       }
+      setReviewedRequest(payload.plan.request);
       setApprovalToken(payload.approvalToken);
       setStage("plan");
-      setSelectedQuote(null);
-      setReservationReady(false);
-      setExecution(null);
+          setExecution(null);
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : "Unable to prepare the call plan.");
     } finally {
@@ -305,11 +234,13 @@ export default function Home() {
       },
       body: JSON.stringify({ approvalToken, approved: true }),
     });
+    let startedExecution: SourcingExecution | null = null;
     try {
       const response = await executionRequest;
       const payload = await response.json() as { execution?: SourcingExecution; requestId?: string; error?: string };
       if (!response.ok || !payload.execution) throw new Error(payload.error ?? "Unable to run the approved sourcing plan.");
       let finalExecution = payload.execution;
+      startedExecution = finalExecution;
       setExecution(finalExecution);
       if (finalExecution.mode === "fixture") {
         for (let index = 1; index < callActivity.length; index += 1) {
@@ -331,17 +262,17 @@ export default function Home() {
       setStage("results");
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : "Unable to run the approved sourcing plan.");
-      setStage("plan");
+      setStage(startedExecution?.mode === "live" && !isTerminalExecution(startedExecution) ? "calling" : "plan");
     } finally {
       setIsExecuting(false);
     }
   };
 
   const resetDemo = () => {
+    setDraftKey((value) => value + 1);
     setStage("request");
-    setSelectedQuote(null);
-    setReservationReady(false);
     setApprovalToken(null);
+    setReviewedRequest(null);
     setHistoryAccessToken(null);
     setExecution(null);
     setRequestError(null);
@@ -350,22 +281,21 @@ export default function Home() {
   };
 
   return (
-    <main>
+    <main className="scout-app">
       <SiteHeader badge={`${market.countryName} · ${market.countryCode}`} />
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">Phone-powered parts sourcing</p>
-          <h1>The right part.<br /><em>One round of calls.</em></h1>
+          <p className="eyebrow">Your parts-sourcing copilot · powered by CALL-E</p>
+          <h1>The right part.<br /><em>Without the runaround.</em></h1>
           <p className="hero-description">
-            SpareScout calls parts dealers in supported markets, verifies fitment, and turns
-            every conversation into a localized quote you can compare.
+            Give Scout the details once. Review the calls. Compare supplier answers with the evidence right beside them.
           </p>
         </div>
         <div className="hero-proof" aria-label="Product metrics">
           <div><strong>17</strong><span>CALL-E markets</span></div>
-          <div><strong>100%</strong><span>human-approved</span></div>
-          <div><strong>0</strong><span>surprise purchases</span></div>
+          <div><strong>01</strong><span>brief for every supplier</span></div>
+          <div><strong>You</strong><span>make the final choice</span></div>
         </div>
       </section>
 
@@ -374,148 +304,36 @@ export default function Home() {
         <div>
           <strong>{executionMode === "live" ? "Live pilot mode" : "Safe demo mode"}</strong>
           <span>{executionMode === "live"
-            ? "Approving the reviewed plan will place real calls to the three business numbers below."
-            : "Switch markets and call languages across the supported CALL-E network. No phone calls or reservations will be made."}</span>
+            ? `Approving the reviewed plan will place real calls to ${activeSuppliers.length} business contacts.`
+            : "Explore the complete workflow with sample suppliers. No phone calls or reservations will be made."}</span>
         </div>
         <span className="mode-chip">{executionMode === "live" ? "REAL CALLS" : "DRY RUN"}</span>
       </div>
 
-      <section className="workspace" aria-label="Parts sourcing workspace">
+      <section className={`workspace ${stage === "results" ? "workspace-complete" : ""}`} aria-label="Parts sourcing workspace">
         <div className="request-panel">
           <div className="panel-heading">
             <span className="step-number">01</span>
-            <div><p>Build a request</p><h2>What are we finding?</h2></div>
+            <div><p>Start your search</p><h2>What are we finding?</h2></div>
           </div>
 
-          <form onSubmit={reviewPlan}>
-            <div className="field-grid">
-              <label className="field">
-                <span>Calling market</span>
-                <select value={form.countryCode} onChange={(event) => updateMarket(event.target.value)}>
-                  {SUPPORTED_MARKETS.map((candidate) => (
-                    <option value={candidate.countryCode} key={candidate.countryCode}>{candidate.countryName}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>Call language</span>
-                <select value={form.locale} onChange={(event) => updateField("locale", event.target.value)}>
-                  {market.locales.map((locale) => (
-                    <option value={locale.code} key={locale.code}>{locale.label}</option>
-                  ))}
-                </select>
-              </label>
-              <fieldset className="mode-choice field-wide">
-                <legend>Execution mode</legend>
-                <label className={executionMode === "fixture" ? "selected" : ""} htmlFor="execution-fixture">
-                  <span className="sr-only">Safe fixture execution</span>
-                  <input id="execution-fixture" aria-label="Safe fixture execution" type="radio" name="execution-mode" checked={executionMode === "fixture"} onChange={() => setExecutionMode("fixture")} />
-                  <span><strong>Safe fixture</strong><small>Structured demonstration; no dialing.</small></span>
-                </label>
-                <label className={`${executionMode === "live" ? "selected" : ""} ${!liveAvailable ? "disabled" : ""}`} htmlFor="execution-live">
-                  <span className="sr-only">Live pilot execution</span>
-                  <input id="execution-live" aria-label="Live pilot execution" type="radio" name="execution-mode" checked={executionMode === "live"} disabled={!liveAvailable} onChange={() => setExecutionMode("live")} />
-                  <span><strong>Live pilot</strong><small>{liveAvailable ? "Real calls after plan approval." : "Requires trusted server configuration."}</small></span>
-                </label>
-              </fieldset>
-              <label className="field field-wide">
-                <span>Vehicle</span>
-                <input value={form.vehicle} onChange={(event) => updateField("vehicle", event.target.value)} required />
-              </label>
-              <label className="field field-wide">
-                <span>Part needed</span>
-                <input value={form.part} onChange={(event) => updateField("part", event.target.value)} required />
-              </label>
-              <label className="field field-wide">
-                <span>Chassis / VIN</span>
-                <input value={form.chassis} onChange={(event) => updateField("chassis", event.target.value)} required />
-                <small>Used only to confirm compatibility</small>
-              </label>
-              <label className="field">
-                <span>Budget ceiling</span>
-                <div className="input-prefix"><b>{market.currency}</b><input type="number" min="1" value={form.budget} onChange={(event) => updateField("budget", event.target.value)} required /></div>
-              </label>
-              <label className="field">
-                <span>Needed by</span>
-                <select value={form.timing} onChange={(event) => updateField("timing", event.target.value)}>
-                  <option>Today</option><option>Tomorrow</option><option>This week</option>
-                </select>
-              </label>
-              <label className="field field-wide">
-                <span>Delivery area</span>
-                <input value={form.location} onChange={(event) => updateField("location", event.target.value)} required />
-              </label>
-              {executionMode === "live" && (
-                <fieldset className="supplier-editor field-wide">
-                  <legend>Authorized supplier contacts</legend>
-                  <p>Live access requires a private operator credential, direct consent, and numbers pre-approved in the server allowlist.</p>
-                  <label className="field">
-                    <span>Operator access token</span>
-                    <input
-                      type="password"
-                      value={operatorToken}
-                      onChange={(event) => setOperatorToken(event.target.value)}
-                      autoComplete="off"
-                      minLength={32}
-                      placeholder="Private deployment credential"
-                      required
-                    />
-                    <small>Used only for these live requests; never saved to browser history.</small>
-                  </label>
-                  {liveSuppliers.map((supplier, index) => (
-                    <div className="supplier-editor-row" key={supplier.id}>
-                      <label><span>Supplier {index + 1}</span><input value={supplier.name} onChange={(event) => updateLiveSupplier(index, "name", event.target.value)} placeholder="Business name" required /></label>
-                      <label><span>Area</span><input value={supplier.area} onChange={(event) => updateLiveSupplier(index, "area", event.target.value)} placeholder="City or district" required /></label>
-                      <label><span>E.164 phone</span><input type="tel" value={supplier.phone} onChange={(event) => updateLiveSupplier(index, "phone", event.target.value)} placeholder="+12025550101" pattern="\+[1-9][0-9]{7,14}" required /></label>
-                    </div>
-                  ))}
-                  <div className="consent-panel">
-                    <label className="field">
-                      <span>Authorized calling window</span>
-                      <input
-                        value={authorizedCallWindow}
-                        onChange={(event) => setAuthorizedCallWindow(event.target.value)}
-                        placeholder="17 Aug, 3:00–4:00 PM EAT"
-                        maxLength={120}
-                        required
-                      />
-                      <small>Calls start immediately after final plan approval. Include the date, time, and time zone.</small>
-                    </label>
-                    <label className="consent-check">
-                      <input
-                        type="checkbox"
-                        checked={recipientConsentConfirmed}
-                        onChange={(event) => setRecipientConsentConfirmed(event.target.checked)}
-                        required
-                      />
-                      <span><strong>Direct consent confirmed</strong>Each listed business agreed to receive this AI-assisted sourcing call during the window above.</span>
-                    </label>
-                  </div>
-                </fieldset>
-              )}
-            </div>
-            <button className="primary-button" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Preparing signed plan…" : "Review supplier call plan"} <span aria-hidden="true">→</span>
-            </button>
-            {requestError && <p className="inline-error" role="alert">{requestError}</p>}
-            <p className="button-note"><span aria-hidden="true">⌾</span> You will review every call before it starts</p>
-          </form>
+          <GuidedRequest key={draftKey} form={form} market={market} locked={stage !== "request"} busy={isSubmitting} error={requestError}
+            onField={updateField} onMarket={updateMarket} onSubmit={reviewPlan} mode={executionMode} onMode={setExecutionMode}
+            liveAvailable={liveAvailable} suppliers={liveSuppliers} onSuppliers={setLiveSuppliers} operatorToken={operatorToken} onOperator={setOperatorToken}
+            consent={recipientConsentConfirmed} onConsent={setRecipientConsentConfirmed} start={callWindowStart} end={callWindowEnd} onStart={setCallWindowStart} onEnd={setCallWindowEnd} />
         </div>
 
-        <aside className="activity-panel" aria-live="polite">
+        <aside className="activity-panel" id="call-review">
           {stage === "request" && (
-            <div className="empty-state">
-              <span className="radar" aria-hidden="true"><i /><i /><b>3</b></span>
-              <p className="eyebrow">Your supplier network</p>
-              <h2>Three dealers are ready to check.</h2>
-              <p>Complete the request to preview exactly what SpareScout will ask each supplier.</p>
-              <ul className="supplier-mini-list">
-                {activeSuppliers.map((supplier, index) => <li key={supplier.id}><span>{supplier.name || `Supplier ${index + 1}`}</span><small>{supplier.area || "Contact details required"}</small></li>)}
-              </ul>
+            <div className="request-summary">
+              <p className="eyebrow">Your request, at a glance</p><h2>One brief.<br />Every supplier.</h2>
+              <dl><div><dt>Vehicle</dt><dd>{form.vehicle || "Add your vehicle"}</dd></div><div><dt>Looking for</dt><dd>{form.part || "Choose a part"}</dd></div><div><dt>Fitment reference</dt><dd>{form.chassis || "Add a VIN or part number"}</dd></div><div><dt>Budget</dt><dd>{Number(form.budget) > 0 ? formatMoney(Number(form.budget), market.currency, form.locale) : "Set a budget"}</dd></div><div><dt>Destination</dt><dd>{form.location} · {form.timing}</dd></div></dl>
+              <div className="summary-promise"><span aria-hidden="true">✓</span><p>Fitment checked before price. Unknown answers stay visible.</p></div>
+              <Link href="/about">Meet the project behind Scout ↗</Link>
             </div>
           )}
 
-          {stage === "plan" && (
+          {stage === "plan" && reviewedRequest && (
             <div className="plan-state">
               <div className="panel-heading compact">
                 <span className="step-number">02</span>
@@ -524,25 +342,25 @@ export default function Home() {
               <div className="call-script">
                 <p>SpareScout will ask each supplier to:</p>
                 <ol>
-                  <li>Confirm a <strong>{form.part.toLowerCase()}</strong> fits the <strong>{form.vehicle}</strong> using chassis {form.chassis}.</li>
+                  <li>Confirm a <strong>{reviewedRequest.part.toLowerCase()}</strong> fits the <strong>{reviewedRequest.vehicle}</strong> using chassis {reviewedRequest.fitmentReference}.</li>
                   <li>Quote brand, condition, total price and available quantity.</li>
-                  <li>Check delivery to {form.location} by {form.timing.toLowerCase()}.</li>
+                  <li>Check delivery to {reviewedRequest.deliveryLocation} by {reviewedRequest.neededBy.toLowerCase()}.</li>
                   <li>Ask whether the item can be held—without reserving it.</li>
                 </ol>
               </div>
               <div className="call-targets">
-                {activeSuppliers.map((supplier) => <div key={supplier.id}><span className="supplier-index">{supplier.name.charAt(0)}</span><span><strong>{supplier.name}</strong><small>{supplier.phone}</small></span><b>Ready</b></div>)}
+                {reviewedRequest.suppliers.map((supplier) => <div key={supplier.id}><span className="supplier-index">{supplier.name.charAt(0)}</span><span><strong>{supplier.name}</strong><small>{supplier.phone}</small></span><b>Ready</b></div>)}
               </div>
               {executionMode === "live" && (
                 <div className="consent-review">
                   <span aria-hidden="true">✓</span>
-                  <p><strong>Operator authenticated · recipients allowlisted</strong>Consent attested for: {authorizedCallWindow}</p>
+                  <p><strong>Operator authenticated · recipients allowlisted</strong>Consent attested for: {reviewedRequest.authorizedCallWindow}</p>
                 </div>
               )}
               <div className="guardrail"><span>!</span><p><strong>No commitments</strong>Calls may gather quotes only. Payment, purchase, and reservation are blocked.</p></div>
-              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>{executionMode === "live" ? "Approve 3 supplier calls" : "Approve 3 demo calls"} <span>→</span></button>
+              <button className="primary-button light" type="button" onClick={approveCalls} disabled={isExecuting}>{executionMode === "live" ? `Approve ${reviewedRequest.suppliers.length} supplier calls` : "Approve 3 demo calls"} <span>→</span></button>
               {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
-              <button className="text-button" type="button" onClick={() => setStage("request")}>Edit request</button>
+              <button className="text-button" type="button" onClick={() => { setApprovalToken(null); setReviewedRequest(null); setStage("request"); }}>Edit request</button>
             </div>
           )}
 
@@ -560,6 +378,7 @@ export default function Home() {
                 ))}
               </ul>
               {requestError && <p className="inline-error dark" role="alert">{requestError}</p>}
+              {requestError && execution?.mode === "live" && <Link className="inline-cta" href="/history">Refresh this run in History →</Link>}
             </div>
           )}
 
@@ -567,7 +386,7 @@ export default function Home() {
             <div className="summary-state">
               <p className="eyebrow">Sourcing complete</p>
               <h2>{displayQuotes.filter((quote) => quote.status === "Verified").length} verified options found.</h2>
-              <p>Best verified price is <strong>{formatMoney(bestVerified.price, market.currency, form.locale)}</strong>, with evidence attached.</p>
+              {bestVerified ? <p>Best verified price is <strong>{formatMoney(bestVerified.price!, market.currency, form.locale)}</strong>, with evidence attached.</p> : <p>No offer is ready to select. Review the missing information below.</p>}
               <div className="summary-stats"><div><b>{displayQuotes.length}/{activeSuppliers.length}</b><span>results</span></div><div><b>{displayQuotes.filter((quote) => quote.status === "Verified").length}</b><span>verified</span></div><div><b>{execution?.mode === "live" ? "Live" : "Fixture"}</b><span>{execution?.mode === "live" ? "CALL-E run" : "safe mode"}</span></div></div>
               <button className="secondary-button" type="button" onClick={resetDemo}>Start another search</button>
             </div>
@@ -575,30 +394,7 @@ export default function Home() {
         </aside>
       </section>
 
-      {stage === "results" && (
-        <section className="results-section" aria-labelledby="results-title">
-          <div className="results-heading"><div><p className="eyebrow">03 · Compare verified offers</p><h2 id="results-title">Evidence, not guesswork.</h2></div><div className="legend"><span><i className="verified-dot" />Verified fitment</span><span><i className="partial-dot" />Needs confirmation</span></div></div>
-          <div className="quote-grid">
-            {displayQuotes.map((quote) => (
-              <article className={`quote-card ${selectedQuote === quote.id ? "selected" : ""}`} key={quote.id}>
-                {quote.id === bestVerified.id && <span className="best-tag">BEST VERIFIED OFFER</span>}
-                <div className="quote-top"><div><p>{quote.area}</p><h3>{quote.supplier}</h3></div><span className={`fitment ${quote.status.toLowerCase()}`}>{quote.status}</span></div>
-                <div className="quote-price"><strong>{formatMoney(quote.price, market.currency, form.locale)}</strong><span>{quote.brand} · new</span></div>
-                <dl><div><dt>Availability</dt><dd>{quote.stock}</dd></div><div><dt>Delivery</dt><dd>{quote.delivery}</dd></div><div><dt>Confidence</dt><dd>{quote.confidence}%</dd></div></dl>
-                <div className="confidence-bar"><span style={{ width: `${quote.confidence}%` }} /></div>
-                <details><summary>View call evidence <span>+</span></summary><p>“{quote.evidence}”</p></details>
-                {quote.note && <p className="warning-note"><span>!</span>{quote.note}</p>}
-                <button type="button" className="select-button" onClick={() => { setSelectedQuote(quote.id); setReservationReady(false); }}>{selectedQuote === quote.id ? "Offer selected ✓" : "Select this offer"}</button>
-              </article>
-            ))}
-          </div>
-          <div className="reservation-bar">
-            <div><span className="step-number">04</span><p><strong>{selectedQuote ? `${displayQuotes.find((quote) => quote.id === selectedQuote)?.supplier} selected` : "Choose an offer to continue"}</strong><small>A separate approval is always required before a reservation call.</small></p></div>
-            <button disabled={!selectedQuote} onClick={() => setReservationReady(true)}>Preview reservation call</button>
-          </div>
-          {reservationReady && <div className="reservation-message" role="status"><span>✓</span><div><strong>Reservation preview ready</strong><p>Demo complete—no supplier was contacted and nothing was reserved.</p></div></div>}
-        </section>
-      )}
+      {stage === "results" && reviewedRequest && <QuoteComparison quotes={displayQuotes} request={reviewedRequest} fixture={execution?.mode !== "live"} />}
 
       <SiteFooter />
     </main>

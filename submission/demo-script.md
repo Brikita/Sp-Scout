@@ -10,7 +10,7 @@ Show the headline and the fitment-first request.
 
 ## 0:15–0:38 — Worldwide request
 
-Switch between two supported markets so currency, language, location, budget, and recipients visibly change. Return to the pilot market, enter the real test vehicle and part, and explain that only documented CALL-E regions are offered.
+Show the three-step request wizard. Optionally read a clear part-label photo and confirm the extracted reference. Switch markets in Preferences to show currency, language and location changing together. On Suppliers, show the nearby business search and distinguish sample contacts from an authorized live pilot.
 
 ## 0:38–0:58 — Approval boundary
 
@@ -24,9 +24,9 @@ If no real pilot has been authorized yet, record the fixture flow and label it p
 
 ## 1:28–1:58 — Structured evidence
 
-Reveal the offer cards. Compare compatibility, brand, condition, price, stock, delivery, confidence, and evidence. Open the incomplete result and explain why it is not ranked as verified.
+Reveal the recommendation and offer cards. Compare compatibility, brand, condition, price, stock, delivery and evidence. Switch to the side-by-side table, filter offers ready to select, and download the sourcing brief. Open the incomplete result and explain why it is not selectable.
 
-Open **Request history**. Show that the completed workflow is a durable audit record rather than a transient animation, while the supplier numbers remain masked and the history endpoint requires its separate browser-held credential.
+On a D1-backed pilot deployment, open **Request history** to show the durable audit record and masked supplier numbers. The public Vercel fixture has no D1 binding; use the downloaded sourcing brief there and do not claim durable history is available on that runtime.
 
 Explain the recovery path: if a live sourcing tab closes before CALL-E reaches a terminal state, opening or refreshing History securely retrieves the existing run and saves its newest status. It cannot dial again because the recovery route performs only a provider GET.
 

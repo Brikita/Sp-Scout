@@ -2,22 +2,14 @@ import { drizzle } from "drizzle-orm/d1";
 import { getRuntimeBindings } from "../lib/runtime-bindings";
 import * as schema from "./schema";
 
-export type D1Statement = {
-  bind: (...values: unknown[]) => D1Statement;
-  all: <T = Record<string, unknown>>() => Promise<{ results: T[] }>;
-  first: <T = Record<string, unknown>>() => Promise<T | null>;
-};
+export type D1Statement = D1PreparedStatement;
+export type D1Binding = D1Database;
 
-export type D1Binding = {
-  prepare: (query: string) => D1Statement;
-  batch: (statements: D1Statement[]) => Promise<unknown[]>;
-};
-
-export function getOptionalD1(): D1Binding | undefined {
-  return getRuntimeBindings().DB as D1Binding | undefined;
+export function getOptionalD1(): D1Database | undefined {
+  return getRuntimeBindings().DB as D1Database | undefined;
 }
 
-export function getD1(): D1Binding {
+export function getD1(): D1Database {
   const database = getOptionalD1();
   if (!database) {
     throw new Error(
@@ -28,5 +20,5 @@ export function getD1(): D1Binding {
 }
 
 export function getDb() {
-  return drizzle(getD1() as Parameters<typeof drizzle>[0], { schema });
+  return drizzle(getD1(), { schema });
 }
