@@ -14,13 +14,13 @@ Independent auto-parts dealers often have current stock that is missing or stale
 
 ## What it does
 
-SpareScout accepts a localized vehicle-part request, prepares a reviewable supplier call plan, and requires explicit approval before CALL-E can contact anyone. CALL-E gathers fitment, brand, condition, price, stock, and delivery information from several suppliers. Strict result schemas turn those conversations into comparable quotes with readiness labels and evidence. Anything incomplete remains visibly incomplete.
+SpareScout accepts a localized vehicle-part request, prepares a reviewable supplier call plan, and requires explicit approval before CALL-E can contact anyone. CALL-E gathers fitment, brand, condition, price, stock, and delivery information from one or more approved suppliers. Strict result schemas turn those conversations into comparable quotes with readiness labels and evidence. Anything incomplete remains visibly incomplete.
 
-The public path is a safe no-call fixture. The trusted backend implements the real CALL-E TypeScript SDK, stable idempotency, durable status monitoring, and D1 history. A sourcing approval never authorizes payment, purchase, or a reservation.
+The public judge path is a safe no-call fixture. A separate private pilot deployment runs the real CALL-E TypeScript SDK with stable idempotency, durable status monitoring and D1 history. A sourcing approval never authorizes payment, purchase or a reservation.
 
 ## How we built it
 
-The updated interface adds a three-step request flow, confirmed part-label OCR, nearby business search, quote-readiness filters, a side-by-side comparison and a downloadable sourcing brief. These additions must be released before the submitted video depicts them as available at the public demo URL.
+The deployed interface includes a three-step request flow, confirmed part-label OCR, nearby business search, quote-readiness filters, a side-by-side comparison, a downloadable sourcing brief and a project information page. The public URL exposes the full fixture experience, while the private pilot adds authenticated live mode and D1-backed history.
 
 - React 19, TypeScript, vinext, Vite, and a Cloudflare Workers-compatible runtime.
 - Official `@call-e/calle` server SDK for batch call creation and result retrieval.
@@ -44,7 +44,7 @@ Another challenge was honest comparison. Required schema fields make results mac
 - A complete localized sourcing, approval, execution, monitoring, and comparison flow.
 - A fixture plan that cannot become live through a server configuration change.
 - Durable, masked audit history and denominator-honest pilot reporting.
-- A coherent public product experience covering workflow, markets, safety, privacy, and evidence.
+- A coherent public fixture experience covering workflow, markets, safety, privacy, project context and evidence.
 
 ## What we learned
 

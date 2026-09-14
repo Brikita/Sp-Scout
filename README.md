@@ -1,10 +1,12 @@
 # SpareScout
 
-SpareScout is a phone-powered sourcing application for vehicle parts. A buyer describes the exact vehicle, fitment reference, part, budget, location, and deadline once. SpareScout prepares a reviewable plan, uses CALL-E to gather quotes from several suppliers, and turns the conversations into comparable, evidence-backed results.
+SpareScout is a phone-powered sourcing application for vehicle parts. A buyer describes the exact vehicle, fitment reference, part, budget, location, and deadline once. SpareScout prepares a reviewable plan, uses CALL-E to gather quotes from one or more approved suppliers, and turns the conversations into comparable, evidence-backed results.
 
 **Public judge demo:** https://sp-scout.vercel.app
 
-The application defaults to a no-call fixture workflow. The trusted backend also implements the real CALL-E TypeScript SDK path, but a live run still requires a live plan, server credentials, and explicit approval of that exact plan.
+**Private live pilot:** https://sparescout-ke.briankinyua0101.chatgpt.site (owner sign-in required)
+
+The public application is a no-call fixture workflow. The private pilot deploys the real CALL-E TypeScript SDK path with D1 storage; a live run still requires operator authentication, an allowlisted consenting recipient, an authorized calling window, and explicit approval of that exact plan.
 
 ## Why this problem needs phone calls
 

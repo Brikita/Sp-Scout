@@ -25,14 +25,14 @@ During the submission period, SpareScout was expanded from an initial phone-powe
 7. Compare the returned quotes. Switch between Cards and Side by side, inspect evidence, filter to Ready to select, choose an offer, and download the sourcing brief.
 8. Visit **The project**, **Safety**, and **Pilot evidence** from the navigation for architecture, limitations, and evidence boundaries.
 
-The fixture is deliberately labeled throughout. Live calling is enabled only on a separately configured trusted deployment with D1 storage, a CALL-E API key, explicit recipient consent, and an active authorized call window.
+The fixture is deliberately labeled throughout. The submitted public URL cannot place calls. A separate private pilot deployment has D1 storage and authenticated live mode for the approved recording; it requires an allowlisted consenting recipient, an explicit approval and an active authorized call window.
 
 ## Required URLs and classification
 
 - **Functional demo URL:** https://sp-scout.vercel.app
 - **Project submission pull request URL:** https://github.com/CALLE-AI/awesome-phone-call-agents/pull/261
 - **Primary use case:** Service coordination & dispatch
-- **One-sentence real-world task:** SpareScout calls consenting auto-parts suppliers in parallel to verify vehicle-part fitment, stock, price, and delivery, then returns evidence-backed quotes for the buyer to compare.
+- **One-sentence real-world task:** SpareScout calls one or more consenting auto-parts suppliers to verify vehicle-part fitment, stock, price, and delivery, then returns evidence-backed quotes for the buyer to compare.
 
 ## Eligibility checkboxes
 

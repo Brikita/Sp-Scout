@@ -4,7 +4,7 @@ Use one or two people who have explicitly agreed to receive the demo call. The s
 
 ## Prepare before recording
 
-- Deploy the exact commit shown in GitHub and verify the public URL.
+- Confirm the exact GitHub commit is deployed to the private D1-backed Site and verify live mode before recording.
 - Configure the trusted live environment with CALL-E, D1, the approval secret, and an authorized call window that covers the recording.
 - Confirm each recipient's number, region, language, consent, availability, and role-play inventory facts.
 - Use a real vehicle request and a printed part reference. Avoid personal VINs or customer data in the public video.
