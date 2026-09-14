@@ -16,11 +16,11 @@ Independent auto-parts dealers often have current stock that is missing or stale
 
 SpareScout accepts a localized vehicle-part request, prepares a reviewable supplier call plan, and requires explicit approval before CALL-E can contact anyone. CALL-E gathers fitment, brand, condition, price, stock, and delivery information from one or more approved suppliers. Strict result schemas turn those conversations into comparable quotes with readiness labels and evidence. Anything incomplete remains visibly incomplete.
 
-The public judge path is a safe no-call fixture. A separate private pilot deployment runs the real CALL-E TypeScript SDK with stable idempotency, durable status monitoring and D1 history. A sourcing approval never authorizes payment, purchase or a reservation.
+The public judge path is a clearly labeled no-call fixture with deterministic simulated supplier responses. A separate private pilot deployment runs the real CALL-E TypeScript SDK with stable idempotency, durable status monitoring and D1 history when the recipient and language are within current provider coverage. A sourcing approval never authorizes payment, purchase or a reservation.
 
 ## How we built it
 
-The deployed interface includes a three-step request flow, confirmed part-label OCR, nearby business search, quote-readiness filters, a side-by-side comparison, a downloadable sourcing brief and a project information page. The public URL exposes the full fixture experience, while the private pilot adds authenticated live mode and D1-backed history.
+The deployed interface includes a three-step request flow, confirmed part-label OCR, nearby business search, quote-readiness filters, a side-by-side comparison, a downloadable sourcing brief and a project information page. The public URL exposes the full fixture experience. The private pilot adds authenticated live mode and D1-backed history, and blocks unsupported recipient/language combinations before approval.
 
 - React 19, TypeScript, vinext, Vite, and a Cloudflare Workers-compatible runtime.
 - Official `@call-e/calle` server SDK for batch call creation and result retrieval.
@@ -28,7 +28,7 @@ The deployed interface includes a three-step request flow, confirmed part-label 
 - Authenticated live planning, server-side recipient allowlisting, and expiring browser approval data with phone values removed.
 - Official CALL-E origin pinning for every credential-bearing SDK request.
 - D1 persistence for requests, recipients, approvals, runs, evidence, and quotes.
-- Seventeen supported CALL-E regions with market-aware language and currency.
+- Seventeen localized demo markets with market-aware language and currency, plus a separate provider-coverage gate for live calls.
 - Automated pilot metrics that include only durable live records and exclude every fixture.
 - A private, browser-authorized sourcing ledger backed by durable D1 records and hashed per-request history credentials.
 - Recovery of a saved non-terminal CALL-E run from History without creating another call. Recovery after provider acceptance but before the call ID is saved remains future work.
@@ -52,7 +52,7 @@ Phone automation needs more than a natural voice. The useful product is the cont
 
 ## What is next
 
-- Complete the consenting supplier pilot and publish the automatically calculated metrics.
+- Complete a consenting supplier pilot in a currently supported CALL-E recipient/language combination and publish the automatically calculated metrics.
 - Add the separately signed reservation-call workflow.
 - Reconcile terminal webhooks against canonical CALL-E API results once the production webhook authentication contract is configured.
 

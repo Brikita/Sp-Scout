@@ -25,7 +25,7 @@ During the submission period, SpareScout was expanded from an initial phone-powe
 7. Compare the returned quotes. Switch between Cards and Side by side, inspect evidence, filter to Ready to select, choose an offer, and download the sourcing brief.
 8. Visit **The project**, **Safety**, and **Pilot evidence** from the navigation for architecture, limitations, and evidence boundaries.
 
-The fixture is deliberately labeled throughout. The submitted public URL cannot place calls. A separate private pilot deployment has D1 storage and authenticated live mode for the approved recording; it requires an allowlisted consenting recipient, an explicit approval and an active authorized call window.
+The fixture is deliberately labeled throughout and returns deterministic simulated supplier responses. The submitted public URL cannot place calls. A separate private pilot deployment has D1 storage and authenticated live mode, but it additionally requires a currently supported recipient/language combination. CALL-E currently rejects Kenya/English recipients, so the Kenyan submission video uses the clearly labeled fixture.
 
 ## Required URLs and classification
 

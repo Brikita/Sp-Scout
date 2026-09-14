@@ -1,12 +1,12 @@
 # Live-call demo plan
 
-Use one or two people who have explicitly agreed to receive the demo call. The safest convincing setup is a teammate or friendly parts professional role-playing a supplier with a prepared inventory card. Do not surprise-call businesses during the recording.
+Use this plan only if one or two people in a currently supported CALL-E recipient/language combination have explicitly agreed to receive the demo call. Kenya/English is currently rejected before call creation. The safest convincing setup is a teammate or friendly parts professional role-playing a supplier with a prepared inventory card. Do not surprise-call businesses during the recording.
 
 ## Prepare before recording
 
 - Confirm the exact GitHub commit is deployed to the private D1-backed Site and verify live mode before recording.
 - Configure the trusted live environment with CALL-E, D1, the approval secret, and an authorized call window that covers the recording.
-- Confirm each recipient's number, region, language, consent, availability, and role-play inventory facts.
+- Confirm each recipient's number, region, language, provider coverage, consent, availability, and role-play inventory facts.
 - Use a real vehicle request and a printed part reference. Avoid personal VINs or customer data in the public video.
 - Run one private rehearsal. Confirm audio, result extraction, status polling, and history recovery.
 - Keep the Safe demo available as a fallback. Never present fixture output as a real call.
@@ -17,11 +17,11 @@ Give each consenting recipient a short card, not a script. Example:
 
 - Part: front-left wheel bearing
 - Fitment reference: 43550-12030
-- Vehicle: 2014 Toyota Fielder
+- Vehicle: 2014 Toyota Corolla
 - Brand and condition: SKF, new
-- Price: KES 5,760
+- Price: USD 145
 - Quantity: 3
-- Delivery: same day to Nairobi CBD
+- Delivery: same day to Chicago, IL
 - Evidence phrase: “I checked reference 43550-12030 in our catalogue.”
 - Boundary: if asked to reserve or purchase, say that a separate confirmation is required.
 
